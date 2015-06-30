@@ -19,17 +19,8 @@
 // DEALINGS IN THE SOFTWARE.
 
 #include "TsunamiSquares.h"
-#include "TsunamiSquaresUtil.h"
 
-int main (void) {
-    PluginID        event_output, graceful_quit;
-    Simulation    *vc_sim;
-
-    vc_sim = new Simulation(argc, argv);
-
-    // EqSim files are parsed if a geometry file name is specified
-    read_model_file = vc_sim->registerPlugin(new ReadModelFile, !vc_sim->getModelFile().empty());
-
-
+int main (int argc, char **argv) {
+    std::cout << "Loaded everything fine!" << std::endl;
     return 0;
 }

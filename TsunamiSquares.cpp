@@ -19,7 +19,6 @@
 // DEALINGS IN THE SOFTWARE.
 
 #include "TsunamiSquares.h"
-#include "TsunamiSquaresUtil.h"
 
 tsunamisquares::Square &tsunamisquares::ModelWorld::square(const UIndex &ind) throw(std::domain_error) {
     std::map<UIndex, Square>::iterator it = _squares.find(ind);

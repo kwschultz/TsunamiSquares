@@ -521,5 +521,4 @@ namespace tsunamisquares {
 
             VectorList convertArray2xyz(const FloatList &lats, const FloatList &lons) const;
     };
-
-
+}
