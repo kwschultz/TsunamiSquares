@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Kasey W. Schultz, Steven N. Ward
+// Copyright (c) 2015 Kasey W. Schultz, Steven N. Ward, Eric M. Heien
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -48,15 +48,15 @@ namespace tsunamisquares {
             void next_line(std::ostream &out_stream) const;
     };
 
-//    struct FieldDesc {
-//        std::string name;
-//        std::string details;
-//        size_t      offset;
-//        hid_t       type;
-//        size_t      size;
-//    };
-//
-//    typedef struct FieldDesc FieldDesc;
+    struct FieldDesc {
+        std::string name;
+        std::string details;
+        size_t      offset;
+        hid_t       type;
+        size_t      size;
+    };
+
+    typedef struct FieldDesc FieldDesc;
 
     struct VertexData {
         UIndex  _id;
@@ -233,7 +233,7 @@ namespace tsunamisquares {
 //            void write_ascii(std::ostream &out_stream) const;
     };
     
-    
+    // Class to contain all Squares and Bathymetry 
     class ModelWorld : public ModelIO {
         private:
             std::map<UIndex, Vertex>   _vertices;
@@ -241,24 +241,106 @@ namespace tsunamisquares {
             LatLonDepth _base;
             double _min_lat, _max_lat, _min_lon, _max_lon;
             
-            //Add here: config_file, model_file readers
+//            void read_square_hdf5(const hid_t &data_file);
+//            void read_vertex_hdf5(const hid_t &data_file);
+//            void write_square_hdf5(const hid_t &data_file) const;
+//            void write_vertex_hdf5(const hid_t &data_file) const;
+            
         public:
             Square &new_square(void);
             Vertex &new_vertex(void);
             
+            Square &square(const UIndex &ind) throw(std::domain_error);
+            Vertex &vertex(const UIndex &ind) throw(std::domain_error);
             
-            void insert(const ModelWorld &other_world);
+            siterator begin_square(void) {
+                return siterator(&_squares, _squares.begin());
+            };
+            siterator end_square(void) {
+                return siterator(&_squares, _squares.end());
+            };
+            
+            UIndex next_square_index(void) const {
+                if (_square.size()) return _square.rbegin()->first+1;
+                else return 0;
+            };
+            UIndex next_vertex_index(void) const {
+                if (_vertices.size()) return _vertices.rbegin()->first+1;
+                else return 0;
+            };
+            
+            size_t num_squares(void) const;
+            size_t num_vertices(void) const;
+            
             void insert(const Square &new_square);
             void insert(const Vertex &new_vertex);
-            //Add here; iterator methods (define iterators in TsunamiLibUtil.h)
+            
+            void clear(void);
+            
+            void reset_base_coord(const LatLonDepth &new_base);
             
             SquareIDSet getElementIDs(void) const;
             SquareIDSet getVertexIDs(void) const;
 
             SquareIDSet neighbors(void) const;
+            
+//            int read_file_ascii(const std::string &file_name);
+//            int write_file_ascii(const std::string &file_name) const;            
+//            int read_file_hdf5(const std::string &file_name);
+//            int write_file_hdf5(const std::string &file_name) const;
 
     };
+    
+    // Iterator class for parsing through square objects
+    class siterator {
+        private:
+            std::map<UIndex, Square>              *_map;
+            std::map<UIndex, Square>::iterator    _it;
+            UIndex                                      _fid;
+
+        public:
+            eiterator(void) : _map(NULL), _fid(INVALID_INDEX) {};
+            eiterator(std::map<UIndex, Square> *map, std::map<UIndex, Square>::iterator start, const UIndex &fid) : _map(map), _it(start), _fid(fid) {
+                if (_map && _fid != INVALID_INDEX) {
+                    while (_it != _map->end() && _it->second.section_id() != _fid) {
+                        _it++;
+                    }
+                }
+            };
+            eiterator &operator=(const eiterator &other) {
+                _map = other._map;
+                _it = other._it;
+                _fid = other._fid;
+                return *this;
+            };
+            bool operator==(const eiterator &other) {
+                return (_map == other._map && _it == other._it && _fid == other._fid);
+            };
+            bool operator!=(const eiterator &other) {
+                return (_map != other._map || _it != other._it || _fid != other._fid);
+            };
+            eiterator &operator++(void) {
+                if (_map && _it != _map->end()) {
+                    if (_fid == INVALID_INDEX) {
+                        _it++;
+                    } else {
+                        do {
+                            _it++;
+                        } while (_it != _map->end() && _it->second.section_id() != _fid);
+                    }
+                }
+
+                return *this;
+            };
+            Square &operator*(void) {
+                return _it->second;
+            };
+            Square *operator->(void) {
+                return (&*(eiterator)*this);
+            };
+    };
             
+    typedef std::set<UIndex> SquareIDSet;
 };
     
     

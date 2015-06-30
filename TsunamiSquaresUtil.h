@@ -291,7 +291,6 @@ namespace tsunamisquares {
 
     typedef std::vector< double > FloatList;
     typedef std::vector< Vec<3> > VectorList;
-    typedef std::set<UIndex> SquareIDSet;
 
     template <unsigned int ncols>
     class TensorRow {
