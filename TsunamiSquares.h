@@ -67,13 +67,13 @@ namespace tsunamisquares {
     class Vertex : public ModelIO {
         private:
             VertexData          _data;
-            std::vector<double> _pos;
+            Vec<3> _pos;
 
         public:
             Vertex(void) {
                 _data._id = INVALID_INDEX;
                 _data._lat = _data._lon = _data._alt = std::numeric_limits<float>::quiet_NaN();
-                _pos = std::vector<double>(3);
+                _pos = Vec<3>;
                 _data._is_boundary = 0;
             };
 
@@ -93,17 +93,17 @@ namespace tsunamisquares {
             };
             void set_lld(const LatLonDepth &lld, const LatLonDepth &base) {
                 Conversion c(base);
-                std::vector<double>(3) xyz = c.convert2xyz(lld);
+                Vec<3> xyz = c.convert2xyz(lld);
                 _data._lat = lld.lat();
                 _data._lon = lld.lon();
                 _data._alt = lld.altitude();
                 _pos = xyz;
             };
 
-            std::vector<double>(3) xyz(void) const {
+            Vec<3> xyz(void) const {
                 return _pos;
             };
-            void set_xyz(const std::vector<double>(3) &new_xyz, const LatLonDepth &base) {
+            void set_xyz(const Vec<3> &new_xyz, const LatLonDepth &base) {
                 Conversion c(base);
                 LatLonDepth lld = c.convert2LatLon(new_xyz);
                 _pos = new_xyz;
@@ -112,17 +112,17 @@ namespace tsunamisquares {
                 _data._alt = lld.altitude();
             };
 
-            static std::string hdf5_table_name(void) {
-                return "vertices";
-            };
-            
-            static void get_field_descs(std::vector<FieldDesc> &descs);
-
-            void read_data(const VertexData &in_data);
-            void write_data(VertexData &out_data) const;
-
-            void read_ascii(std::istream &in_stream);
-            void write_ascii(std::ostream &out_stream) const;
+//            static std::string hdf5_table_name(void) {
+//                return "vertices";
+//            };
+//            
+//            static void get_field_descs(std::vector<FieldDesc> &descs);
+//
+//            void read_data(const VertexData &in_data);
+//            void write_data(VertexData &out_data) const;
+//
+//            void read_ascii(std::istream &in_stream);
+//            void write_ascii(std::ostream &out_stream) const;
     };
 
     struct SquareData {
@@ -133,6 +133,7 @@ namespace tsunamisquares {
         float               _accel[2];
         float               _height;
         float               _friction;
+        float               _density;
     };
 
     class Square : public ModelIO {
@@ -147,7 +148,7 @@ namespace tsunamisquares {
                 for (unsigned int i=0; i<2; ++i) _data._velocity[i] = _data._accel[i] = std::numeric_limits<float>::quiet_NaN();
 
                 _data._is_boundary = false;
-                _data._height = _data._friction = std::numeric_limits<float>::quiet_NaN();
+                _data._height = _data._friction =_data.density = std::numeric_limits<float>::quiet_NaN();
             };
 
             SquareData data(void) const {
@@ -159,6 +160,65 @@ namespace tsunamisquares {
             };
             void set_id(const UIndex &id) {
                 _data._id = id;
+            };
+            
+            bool is_boundary(void) const {
+                return _data._is_boundary;
+            };
+            void set_is_boundary(const bool &is_boundary) {
+                _data._is_boundary = is_boundary;
+            };
+            
+            UIndex vertex(const unsigned int &v) const {
+                assert(v<4);
+                return _data._vertices[v];
+            };
+            void set_vertex(const unsigned int &v, const UIndex &ind) {
+                assert(v<4);
+                _data._vertices[v] = ind;
+            };
+            
+            float height(void) const {
+                return _data._height;
+            };
+            void set_height(const float &new_height) {
+                _data._height = new_height;
+            };
+            
+            double area(void) const {
+                Vec<3> a,b;
+                a=_data._vertices[1]-_data._vertices[0];
+                b=_data._vertices[2]-_data._vertices[0];
+                return a.cross(b).mag();
+            };
+            
+            float volume(void) const {
+                return this->area()*this->height();
+            };
+
+            float mass(void) const {
+                return this->volume()*this->density();
+            };
+
+            float density(void) const {
+                return _data._density;
+            };
+            void set_density(const float &new_density) {
+                _data._density = new_density;
+            };
+
+            //! Calculates the Euclidean distance between the 3D midpoint of this block and another block.
+            double center_distance(const SimElement &other) const {
+                return (other.center() - this->center()).mag();
+            };
+            
+            //! Get center point of this block
+            Vec<3> center() const {
+                Vec<3> c;
+
+                for (unsigned int i=0; i<4; ++i) c += _vert[i];
+
+                return c / 4.0;
             };
 
 //            static std::string hdf5_table_name(void) {
