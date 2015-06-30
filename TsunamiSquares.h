@@ -208,12 +208,12 @@ namespace tsunamisquares {
             };
 
             //! Calculates the Euclidean distance between the 3D midpoint of this block and another block.
-            double center_distance(const SimElement &other) const {
+            double center_distance(const Square &other) const {
                 return (other.center() - this->center()).mag();
             };
             
             //! Get center point of this block
-            Vec<3> center() const {
+            Vec<3> center(void) const {
                 Vec<3> c;
 
                 for (unsigned int i=0; i<4; ++i) c += _vert[i];
@@ -232,10 +232,34 @@ namespace tsunamisquares {
 //            void read_ascii(std::istream &in_stream);
 //            void write_ascii(std::ostream &out_stream) const;
     };
-
-
     
     
+    class ModelWorld : public ModelIO {
+        private:
+            std::map<UIndex, Vertex>   _vertices;
+            std::map<UIndex, Square>  _squares;
+            LatLonDepth _base;
+            double _min_lat, _max_lat, _min_lon, _max_lon;
+            
+            //Add here: config_file, model_file readers
+        public:
+            Square &new_square(void);
+            Vertex &new_vertex(void);
+            
+            
+            void insert(const ModelWorld &other_world);
+            void insert(const Square &new_square);
+            void insert(const Vertex &new_vertex);
+            //Add here; iterator methods (define iterators in TsunamiLibUtil.h)
+            
+            SquareIDSet getElementIDs(void) const;
+            SquareIDSet getVertexIDs(void) const;
+
+            SquareIDSet neighbors(void) const;
+
+    };
+            
+};
     
     
     
