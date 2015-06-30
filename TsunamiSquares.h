@@ -27,9 +27,9 @@
 #include <string.h>
 #include <map>
 
-#include "TsunamiLibUtil.h"
+#include "TsunamiSquaresUtil.h"
 
-namespace tsunamilib {
+namespace tsunamisquares {
     typedef unsigned int UIndex;
     static const UIndex INVALID_INDEX = std::numeric_limits<unsigned int>::max();
     

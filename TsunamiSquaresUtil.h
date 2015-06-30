@@ -44,7 +44,7 @@
 
 #define CROSS_TOLERANCE 0.000001
 
-namespace tsunamilib {
+namespace tsunamisquares {
     // Provides general setup information regarding the library.
     std::string SetupInfo(void);
 
