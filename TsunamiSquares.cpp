@@ -27,7 +27,7 @@ tsunamisquares::Square &tsunamisquares::ModelWorld::square(const UIndex &ind) th
     else return it->second;
 }
 
-tsunamisquares::ModelVertex &tsunamisquares::ModelWorld::vertex(const UIndex &ind) throw(std::domain_error) {
+tsunamisquares::Vertex &tsunamisquares::ModelWorld::vertex(const UIndex &ind) throw(std::domain_error) {
     std::map<UIndex, Vertex>::iterator it = _vertices.find(ind);
 
     if (it == _vertices.end()) throw std::domain_error("tsunamisquares::ModelWorld::vertex");
@@ -243,14 +243,14 @@ tsunamisquares::Square &tsunamisquares::ModelWorld::new_square(void) {
     return _squares.find(max_ind)->second;
 }
 
-tsunamisquares::ModelVertex &tsunamisquares::ModelWorld::new_vertex(void) {
+tsunamisquares::Vertex &tsunamisquares::ModelWorld::new_vertex(void) {
     UIndex  max_ind = next_vertex_index();
     _vertices.insert(std::make_pair(max_ind, Vertex()));
     _vertices.find(max_ind)->second.set_id(max_ind);
     return _vertices.find(max_ind)->second;
 }
 
-//void tsunamisquares::ModelVertex::get_field_descs(std::vector<FieldDesc> &descs) {
+//void tsunamisquares::Vertex::get_field_descs(std::vector<FieldDesc> &descs) {
 //    FieldDesc       field_desc;
 //
 //    field_desc.name = "id";
@@ -309,15 +309,15 @@ tsunamisquares::ModelVertex &tsunamisquares::ModelWorld::new_vertex(void) {
 //
 //}
 //
-//void tsunamisquares::ModelVertex::read_data(const VertexData &in_data) {
+//void tsunamisquares::Vertex::read_data(const VertexData &in_data) {
 //    memcpy(&_data, &in_data, sizeof(VertexData));
 //}
 //
-//void tsunamisquares::ModelVertex::write_data(VertexData &out_data) const {
+//void tsunamisquares::Vertex::write_data(VertexData &out_data) const {
 //    memcpy(&out_data, &_data, sizeof(VertexData));
 //}
 //
-//void tsunamisquares::ModelVertex::read_ascii(std::istream &in_stream) {
+//void tsunamisquares::Vertex::read_ascii(std::istream &in_stream) {
 //    std::stringstream   ss(next_line(in_stream));
 //
 //    ss >> _data._id;
@@ -328,7 +328,7 @@ tsunamisquares::ModelVertex &tsunamisquares::ModelWorld::new_vertex(void) {
 //    ss >> _data._is_trace;
 //}
 //
-//void tsunamisquares::ModelVertex::write_ascii(std::ostream &out_stream) const {
+//void tsunamisquares::Vertex::write_ascii(std::ostream &out_stream) const {
 //    out_stream << _data._id << " ";
 //    out_stream << _data._lat << " ";
 //    out_stream << _data._lon << " ";
@@ -339,8 +339,7 @@ tsunamisquares::ModelVertex &tsunamisquares::ModelWorld::new_vertex(void) {
 //}
 
 void tsunamisquares::ModelWorld::clear(void) {
-    _sections.clear();
-    _elements.clear();
+    _squares.clear();
     _vertices.clear();
 }
 
@@ -378,7 +377,7 @@ void tsunamisquares::ModelWorld::clear(void) {
 //
 //    // Read vertices
 //    for (i=0; i<num_vertices; ++i) {
-//        ModelVertex     new_vert;
+//        Vertex     new_vert;
 //        new_vert.read_ascii(in_file);
 //        _vertices.insert(std::make_pair(new_vert.id(), new_vert));
 //    }
@@ -400,7 +399,7 @@ void tsunamisquares::ModelWorld::clear(void) {
 
 
 void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
-    std::map<UIndex, ModelVertex>::iterator         it;
+    std::map<UIndex, Vertex>::iterator         it;
 
     for (it=_vertices.begin(); it!=_vertices.end(); ++it) {
         it->second.set_lld(it->second.lld(), new_base);
@@ -414,7 +413,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //    std::ofstream                                   out_file;
 //    std::vector<FieldDesc>                          descs;
 //    std::vector<FieldDesc>::iterator                dit;
-//    std::map<UIndex, ModelVertex>::const_iterator   vit;
+//    std::map<UIndex, Vertex>::const_iterator   vit;
 //    std::map<UIndex, Square>::const_iterator  eit;
 //    std::map<UIndex, ModelSection>::const_iterator  fit;
 //
@@ -469,7 +468,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //
 //    // Write vertex header
 //    descs.clear();
-//    ModelVertex::get_field_descs(descs);
+//    Vertex::get_field_descs(descs);
 //
 //    for (dit=descs.begin(); dit!=descs.end(); ++dit) {
 //        out_file << "# " << dit->name << ": " << dit->details << "\n";
@@ -635,7 +634,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //
 //void tsunamisquares::ModelWorld::read_vertex_hdf5(const hid_t &data_file) {
 //    std::vector<FieldDesc>                          descs;
-//    std::map<UIndex, ModelVertex>::const_iterator  fit;
+//    std::map<UIndex, Vertex>::const_iterator  fit;
 //    hsize_t                     num_fields, num_vertices;
 //    unsigned int                i;
 //    VertexData                  *vertex_data;
@@ -644,7 +643,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //    herr_t                      res;
 //
 //    descs.clear();
-//    ModelVertex::get_field_descs(descs);
+//    Vertex::get_field_descs(descs);
 //    num_fields = descs.size();
 //    field_offsets = new size_t[num_fields];
 //    field_sizes = new size_t[num_fields];
@@ -654,20 +653,20 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //        field_sizes[i] = descs[i].size;
 //    }
 //
-//    res = H5TBget_table_info(data_file, ModelVertex::hdf5_table_name().c_str(), &num_fields, &num_vertices);
+//    res = H5TBget_table_info(data_file, Vertex::hdf5_table_name().c_str(), &num_fields, &num_vertices);
 //
 //    if (res < 0) exit(-1);
 //
 //    // TODO: check that num_fields matches the descs
 //
 //    vertex_data = new VertexData[num_vertices];
-//    res = H5TBread_records(data_file, ModelVertex::hdf5_table_name().c_str(), 0, num_vertices, sizeof(VertexData), field_offsets, field_sizes, vertex_data);
+//    res = H5TBread_records(data_file, Vertex::hdf5_table_name().c_str(), 0, num_vertices, sizeof(VertexData), field_offsets, field_sizes, vertex_data);
 //
 //    if (res < 0) exit(-1);
 //
 //    // Read vertex data into the World
 //    for (i=0; i<num_vertices; ++i) {
-//        ModelVertex  new_vertex;
+//        Vertex  new_vertex;
 //        new_vertex.read_data(vertex_data[i]);
 //        _vertices.insert(std::make_pair(new_vertex.id(), new_vertex));
 //    }
@@ -859,7 +858,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //
 //void tsunamisquares::ModelWorld::write_vertex_hdf5(const hid_t &data_file) const {
 //    std::vector<FieldDesc>                          descs;
-//    std::map<UIndex, ModelVertex>::const_iterator   vit;
+//    std::map<UIndex, Vertex>::const_iterator   vit;
 //    size_t                      num_fields, num_vertices;
 //    unsigned int                i;
 //    VertexData                  blank_vertex, *vertex_data;
@@ -871,7 +870,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //
 //    // Set up the vertex table definition
 //    descs.clear();
-//    ModelVertex::get_field_descs(descs);
+//    Vertex::get_field_descs(descs);
 //    num_fields = descs.size();
 //    num_vertices = _vertices.size();
 //    field_names = new char *[num_fields];
@@ -892,7 +891,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //        field_sizes[i] = descs[i].size;
 //    }
 //
-//    blank_vertex = ModelVertex().data();
+//    blank_vertex = Vertex().data();
 //
 //    // Fill in the data for the vertices
 //    vertex_data = new VertexData[num_vertices];
@@ -904,7 +903,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //    // Create the vertices table
 //    res = H5TBmake_table("Vertices",
 //                         data_file,
-//                         ModelVertex::hdf5_table_name().c_str(),
+//                         Vertex::hdf5_table_name().c_str(),
 //                         num_fields,
 //                         num_vertices,
 //                         sizeof(VertexData),
@@ -923,7 +922,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //        std::stringstream   ss;
 //        ss << "FIELD_" << i << "_DETAILS";
 //        res = H5LTset_attribute_string(data_file,
-//                                       ModelVertex::hdf5_table_name().c_str(),
+//                                       Vertex::hdf5_table_name().c_str(),
 //                                       ss.str().c_str(),
 //                                       field_details[i]);
 //
@@ -981,7 +980,11 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
 //}
 
 
-void tsunamisquares::ModelWorld::insert(const tsunamisquares::Square &new_square) {
+void tsunamisquares::ModelWorld::insert(tsunamisquares::Square &new_square) {
+    // We also want to set the Squares _verts to the (x,y,z) coords of its vertices
+    for (unsigned int i=0; i<4; ++i) {
+        new_square.set_vert(i, this->vertex(new_square.vertex(i)));
+    }
     _squares.insert(std::make_pair(new_square.id(), new_square));
 }
 
@@ -990,26 +993,26 @@ void tsunamisquares::ModelWorld::insert(const tsunamisquares::Vertex &new_vertex
 }
 
 size_t tsunamisquares::ModelWorld::num_squares(void) const {
-    return return _squares.size();
+    return _squares.size();
 }
 
 size_t tsunamisquares::ModelWorld::num_vertices(void) const {
     return _vertices.size();
 }
 
-tsunamisquares::ElementIDSet tsunamisquares::ModelWorld::getSquareIDs(void) const {
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getSquareIDs(void) const {
     SquareIDSet square_id_set;
     std::map<UIndex, Square>::const_iterator  sit;
 
-    for (sit=_square.begin(); sit!=_square.end(); ++sit) {
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
         square_id_set.insert(sit->second.id());
     }
 
     return square_id_set;
 }
 
-tsunamisquares::ElementIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const {
-    ElementIDSet vertex_id_set;
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const {
+    SquareIDSet vertex_id_set;
     std::map<UIndex, Vertex>::const_iterator  vit;
 
     for (vit=_vertices.begin(); vit!=_vertices.end(); ++vit) {

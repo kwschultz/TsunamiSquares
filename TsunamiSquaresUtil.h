@@ -231,6 +231,28 @@ namespace tsunamisquares {
                 res /= a;
                 return res;
             };
+            
+            //! Multiply all elements of this vector by a constant.
+            void operator*=(const float &a) {
+                for (unsigned int i=0; i<dim; ++i) _x[i] *= a;
+            };
+            //! Multiply all elements of this vector by a constant.
+            const Vec<dim> operator* (const float &a) const {
+                Vec<dim> res(*this);
+                res *= a;
+                return res;
+            };
+
+            //! Divide all elements of this vector by a constant.
+            void operator/=(const float &a) {
+                for (unsigned int i=0; i<dim; ++i) _x[i] /= a;
+            };
+            //! Divide all elements of this vector by a constant.
+            const Vec<dim> operator/ (const float &a) const {
+                Vec<dim> res(*this);
+                res /= a;
+                return res;
+            };
 
             //! Test equality of vectors.
             bool operator==(const Vec<dim> &a) {

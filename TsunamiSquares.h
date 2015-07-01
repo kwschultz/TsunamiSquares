@@ -77,6 +77,8 @@ namespace tsunamisquares {
                 _pos = Vec<3>();
                 _data._is_boundary = 0;
             };
+            
+            void clear(void);
 
             VertexData data(void) const {
                 return _data;
@@ -130,9 +132,12 @@ namespace tsunamisquares {
     struct SquareData {
         UIndex              _id;
         unsigned int        _is_boundary;
+        // _vertices for the vertex_id's for this square
         UIndex              _vertices[4];
-        float               _velocity[2];
-        float               _accel[2];
+        // _verts for the vertex (x,y,z) positions for this square
+        Vec<3>              _verts[4];
+        Vec<2>              _velocity;
+        Vec<2>              _accel;
         float               _height;
         float               _friction;
         float               _density;
@@ -147,11 +152,14 @@ namespace tsunamisquares {
                 _data._id = INVALID_INDEX;
 
                 for (unsigned int i=0; i<4; ++i) _data._vertices[i] = INVALID_INDEX;
-                for (unsigned int i=0; i<2; ++i) _data._velocity[i] = _data._accel[i] = std::numeric_limits<float>::quiet_NaN();
+                for (unsigned int i=0; i<4; ++i) _data._verts[i] = Vec<3>();
+                _data._velocity = _data._accel = Vec<2>();
 
                 _data._is_boundary = false;
                 _data._height = _data._friction =_data._density = std::numeric_limits<float>::quiet_NaN();
             };
+            
+            void clear(void);
 
             SquareData data(void) const {
                 return _data;
@@ -179,6 +187,15 @@ namespace tsunamisquares {
                 assert(v<4);
                 _data._vertices[v] = ind;
             };
+
+            Vec<3> vert(const unsigned int &v) const {
+                assert(v<4);
+                return _data._verts[v];
+            };
+            void set_vert(const unsigned int &v, const Vertex &vertex) {
+                assert(v<4);
+                _data._verts[v] = vertex.xyz();
+            };
             
             float height(void) const {
                 return _data._height;
@@ -187,13 +204,38 @@ namespace tsunamisquares {
                 _data._height = new_height;
             };
             
-            double area(void) const {
-                Vec<3> a,b;
-                a=_data._vertices[1]-_data._vertices[0];
-                b=_data._vertices[2]-_data._vertices[0];
-                return a.cross(b).mag();
+            float density(void) const {
+                return _data._density;
+            };
+            void set_density(const float &new_density) {
+                _data._density = new_density;
             };
             
+            Vec<2> velocity(void) const {
+                return _data._velocity;
+            };
+            void set_velocity(const Vec<2> &new_velocity) {
+                _data._velocity = new_velocity;
+            };
+            
+            Vec<2> accel(void) const {
+                return _data._accel;
+            };
+            void set_accel(const Vec<2> &new_accel) {
+                _data._accel = new_accel;
+            };
+            
+            double area(void) const {
+                Vec<3> a,b;
+                // Compute area from vertex (x,y) position not using altitude
+                a[0] = _data._verts[1][0]-_data._verts[0][0];
+                a[1] = _data._verts[1][1]-_data._verts[0][1];
+                b[0] = _data._verts[2][0]-_data._verts[0][0];
+                b[1] = _data._verts[2][1]-_data._verts[0][1];
+                a[2]=b[2]=0.0;
+                return a.cross(b).mag();
+            };
+
             float volume(void) const {
                 return this->area()*this->height();
             };
@@ -202,25 +244,21 @@ namespace tsunamisquares {
                 return this->volume()*this->density();
             };
 
-            float density(void) const {
-                return _data._density;
+            Vec<2> momentum(void) const {
+                return _data._velocity*this->mass();
             };
-            void set_density(const float &new_density) {
-                _data._density = new_density;
+
+            //! Get center point of this square (at sealevel so z=0)
+            Vec<3> center(void) const {
+                Vec<3> c;
+                for (unsigned int i=0; i<4; ++i) c += _data._verts[i];
+                c[2] = 0.0;
+                return c / 4.0;
             };
 
             //! Calculates the Euclidean distance between the 3D midpoint of this block and another block.
             double center_distance(const Square &other) const {
                 return (other.center() - this->center()).mag();
-            };
-            
-            //! Get center point of this block
-            Vec<3> center(void) const {
-                Vec<3> c;
-
-                for (unsigned int i=0; i<4; ++i) c += _data._vertices[i];
-
-                return c / 4.0;
             };
 
 //            static std::string hdf5_table_name(void) {
@@ -318,14 +356,14 @@ namespace tsunamisquares {
             size_t num_squares(void) const;
             size_t num_vertices(void) const;
             
-            void insert(const Square &new_square);
+            void insert(Square &new_square);
             void insert(const Vertex &new_vertex);
             
             void clear(void);
             
             void reset_base_coord(const LatLonDepth &new_base);
             
-            SquareIDSet getElementIDs(void) const;
+            SquareIDSet getSquareIDs(void) const;
             SquareIDSet getVertexIDs(void) const;
 
             SquareIDSet neighbors(void) const;
