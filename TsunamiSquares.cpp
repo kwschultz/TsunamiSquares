@@ -20,6 +20,68 @@
 
 #include "TsunamiSquares.h"
 
+// ----------------------------------------------------------------------
+// -------------------- Square Functions --------------------------------
+// ----------------------------------------------------------------------
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getSquareIDs(void) const {
+    SquareIDSet square_id_set;
+    std::map<UIndex, Square>::const_iterator  sit;
+
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        square_id_set.insert(sit->second.id());
+    }
+
+    return square_id_set;
+}
+
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const {
+    SquareIDSet vertex_id_set;
+    std::map<UIndex, Vertex>::const_iterator  vit;
+
+    for (vit=_vertices.begin(); vit!=_vertices.end(); ++vit) {
+        vertex_id_set.insert(vit->second.id());
+    }
+
+    return vertex_id_set;
+}
+
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const tsunamisquares::Vec<2> &location) const {
+    std::map<double, UIndex>                  square_dists;
+    std::map<double, UIndex>::const_iterator  it;
+    std::map<UIndex, Square>::const_iterator  sit;
+    SquareIDSet                               neighbors;
+
+    // Compute distance from "location" to the center of each square.
+    // Since we use a map, the distances will be ordered since they are the keys
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        double square_dist = sit->second.center().dist(location);
+        square_dists.insert(std::make_pair(square_dist, sit->second.id()));
+    }
+    
+    // Grab the closest 4 squares and return their IDs
+    for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
+        neighbors.insert(it->second);
+        if (neighbors.size() == 4) break;
+    }
+    
+    return neighbors;
+}
+
+// Set the height for all elements equal to the depth of the bathymetry below the center of the square.
+// Result is squares with just enough water so that the water sits at sea level.
+void tsunamisquares::ModelWorld::fillToSeaLevel(void) {
+    std::map<UIndex, Square>::iterator     it;
+
+    for (it=_squares.begin(); it!=_squares.end(); ++it) {
+        it->second.set_height(it->second.center_depth());
+    }
+}
+
+
+
+// ----------------------------------------------------------------------
+// -------------------- Model Building/Editing --------------------------
+// ----------------------------------------------------------------------
 tsunamisquares::Square &tsunamisquares::ModelWorld::square(const UIndex &ind) throw(std::domain_error) {
     std::map<UIndex, Square>::iterator it = _squares.find(ind);
 
@@ -83,50 +145,6 @@ size_t tsunamisquares::ModelWorld::num_vertices(void) const {
     return _vertices.size();
 }
 
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getSquareIDs(void) const {
-    SquareIDSet square_id_set;
-    std::map<UIndex, Square>::const_iterator  sit;
-
-    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
-        square_id_set.insert(sit->second.id());
-    }
-
-    return square_id_set;
-}
-
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const {
-    SquareIDSet vertex_id_set;
-    std::map<UIndex, Vertex>::const_iterator  vit;
-
-    for (vit=_vertices.begin(); vit!=_vertices.end(); ++vit) {
-        vertex_id_set.insert(vit->second.id());
-    }
-
-    return vertex_id_set;
-}
-
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const tsunamisquares::Vec<2> &location) const {
-    std::map<double, UIndex>                  square_dists;
-    std::map<double, UIndex>::const_iterator  it;
-    std::map<UIndex, Square>::const_iterator  sit;
-    SquareIDSet                               neighbors;
-
-    // Compute distance from "location" to the center of each square.
-    // Since we use a map, the distances will be ordered since they are the keys
-    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
-        double square_dist = sit->second.center().dist(location);
-        square_dists.insert(std::make_pair(square_dist, sit->second.id()));
-    }
-    
-    // Grab the closest 4 squares and return their IDs
-    for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
-        neighbors.insert(it->second);
-        if (neighbors.size() == 4) break;
-    }
-    
-    return neighbors;
-}
-
 void tsunamisquares::ModelWorld::printSquare(const UIndex square_id) {
     Square this_square = this->square(square_id);
 
@@ -136,13 +154,15 @@ void tsunamisquares::ModelWorld::printSquare(const UIndex square_id) {
     }
     std::cout << "center: " << this_square.center() << std::endl;
     std::cout << "density: " << this_square.density() << std::endl;
-    std::cout << "height: " << this_square.height() << std::endl;
     std::cout << "area: " << this_square.area() << std::endl;
-    std::cout << "volume: " << this_square.volume() << std::endl;
-    std::cout << "mass: " << this_square.mass() << std::endl;
-    std::cout << "velocity: " << this_square.velocity() << std::endl; 
-    std::cout << "accel: " << this_square.accel() << std::endl;    
-    std::cout << "momentum: " << this_square.momentum() << std::endl; 
+    if (!isnan(this_square.height())) {
+        std::cout << "height: " << this_square.height() << std::endl;
+        std::cout << "volume: " << this_square.volume() << std::endl;
+        std::cout << "mass: " << this_square.mass() << std::endl;
+        std::cout << "velocity: " << this_square.velocity() << std::endl; 
+        std::cout << "accel: " << this_square.accel() << std::endl;    
+        std::cout << "momentum: " << this_square.momentum() << std::endl; 
+    }
 }
 
 void tsunamisquares::ModelWorld::printVertex(const UIndex vertex_id) {
@@ -187,7 +207,9 @@ void tsunamisquares::ModelWorld::get_bounds(LatLonDepth &minimum, LatLonDepth &m
 }
 
 
-// ---- Model File I/O -----------
+// ----------------------------------------------------------------------
+// ----------------------------- Model File I/O -------------------------
+// ----------------------------------------------------------------------
 std::string tsunamisquares::ModelIO::next_line(std::istream &in_stream) {
     std::string line = "";
     size_t      pos;
@@ -392,7 +414,6 @@ int tsunamisquares::ModelWorld::read_file_ascii(const std::string &file_name) {
 
     return 0;
 }
-
 
 int tsunamisquares::ModelWorld::write_file_ascii(const std::string &file_name) const {
     std::ofstream                                   out_file;

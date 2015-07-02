@@ -27,6 +27,7 @@
 #include <string.h>
 #include <fstream>
 #include <map>
+#include <stdlib.h>
 
 #include "TsunamiSquaresUtil.h"
 
@@ -273,52 +274,19 @@ namespace tsunamisquares {
                 return (other.center() - this->center()).mag();
             };
 
+            //! Calculates the depth (positive) at the center of the square using the z-coords from the vertices
+            double center_depth(void) const {
+                double depth = 0.0;
+                for (unsigned int i=0; i<4; ++i) depth += _data._verts[i][2];
+                return fabs(depth)/4.0;
+            };
+    
             static void get_field_descs(std::vector<FieldDesc> &descs);
             void read_data(const SquareData &in_data);
             void write_data(SquareData &out_data) const;
 
             void read_ascii(std::istream &in_stream);
             void write_ascii(std::ostream &out_stream) const;
-    };
-    
-    // Iterator class for parsing through square objects
-    class siterator {
-        private:
-            std::map<UIndex, Square>              *_map;
-            std::map<UIndex, Square>::iterator    _it;
-
-        public:
-            siterator(void) : _map(NULL) {};
-            siterator(std::map<UIndex, Square> *map, std::map<UIndex, Square>::iterator start) : _map(map), _it(start) {
-                if (_map) {
-                    while (_it != _map->end()) {
-                        _it++;
-                    }
-                }
-            };
-            siterator &operator=(const siterator &other) {
-                _map = other._map;
-                _it = other._it;
-                return *this;
-            };
-            bool operator==(const siterator &other) {
-                return (_map == other._map && _it == other._it);
-            };
-            bool operator!=(const siterator &other) {
-                return (_map != other._map || _it != other._it );
-            };
-            siterator &operator++(void) {
-                if (_map && _it != _map->end()) {
-                    _it++;
-                }
-                return *this;
-            };
-            Square &operator*(void) {
-                return _it->second;
-            };
-            Square *operator->(void) {
-                return (&*(siterator)*this);
-            };
     };
             
     typedef std::set<UIndex> SquareIDSet;
@@ -339,13 +307,6 @@ namespace tsunamisquares {
             
             Square &square(const UIndex &ind) throw(std::domain_error);
             Vertex &vertex(const UIndex &ind) throw(std::domain_error);
-            
-            siterator begin_square(void) {
-                return siterator(&_squares, _squares.begin());
-            };
-            siterator end_square(void) {
-                return siterator(&_squares, _squares.end());
-            };
             
             UIndex next_square_index(void) const {
                 if (_squares.size()) return _squares.rbegin()->first+1;
@@ -368,6 +329,13 @@ namespace tsunamisquares {
                 return _base;
             }
             
+            void printSquare(const UIndex square_id);
+            void printVertex(const UIndex vertex_id);
+            void info(void) const;
+            
+            int read_file_ascii(const std::string &file_name);
+            int write_file_ascii(const std::string &file_name) const; 
+            
             void get_bounds(LatLonDepth &minimum, LatLonDepth &maximum) const;
             void reset_base_coord(const LatLonDepth &new_base);
             
@@ -375,11 +343,6 @@ namespace tsunamisquares {
             SquareIDSet getVertexIDs(void) const;
 
             SquareIDSet getNeighborIDs(const Vec<2> &location) const;
-            void printSquare(const UIndex square_id);
-            void printVertex(const UIndex vertex_id);
-            void info(void) const;
-            int read_file_ascii(const std::string &file_name);
-            int write_file_ascii(const std::string &file_name) const;            
-
+            void fillToSeaLevel(void);
     };
 }
