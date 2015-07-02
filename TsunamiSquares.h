@@ -25,6 +25,7 @@
 //#include "hdf5.h"
 //#include "hdf5_hl.h"
 #include <string.h>
+#include <fstream>
 #include <map>
 
 #include "TsunamiSquaresUtil.h"
@@ -48,21 +49,18 @@ namespace tsunamisquares {
             void next_line(std::ostream &out_stream) const;
     };
 
-//    struct FieldDesc {
-//        std::string name;
-//        std::string details;
-//        size_t      offset;
-//        hid_t       type;
-//        size_t      size;
-//    };
-//
-//    typedef struct FieldDesc FieldDesc;
+    struct FieldDesc {
+        std::string name;
+        std::string details;
+    };
+
+    typedef struct FieldDesc FieldDesc;
 
     // Vertices that make up a Tsunami Square
     struct VertexData {
         UIndex  _id;
         float   _lat, _lon, _alt;
-        unsigned int _is_boundary;
+        //unsigned int _is_boundary;
     };
 
     class Vertex : public ModelIO {
@@ -75,7 +73,7 @@ namespace tsunamisquares {
                 _data._id = INVALID_INDEX;
                 _data._lat = _data._lon = _data._alt = std::numeric_limits<float>::quiet_NaN();
                 _pos = Vec<3>();
-                _data._is_boundary = 0;
+                //_data._is_boundary = 0;
             };
             
             void clear(void);
@@ -106,6 +104,13 @@ namespace tsunamisquares {
             Vec<3> xyz(void) const {
                 return _pos;
             };
+            Vec<2> xy(void) const {
+                Vec<2> _pos_xy;
+                _pos_xy[0] = _pos[0];
+                _pos_xy[1] = _pos[1];
+                return _pos_xy;
+            };
+            
             void set_xyz(const Vec<3> &new_xyz, const LatLonDepth &base) {
                 Conversion c(base);
                 LatLonDepth lld = c.convert2LatLon(new_xyz);
@@ -115,23 +120,20 @@ namespace tsunamisquares {
                 _data._alt = lld.altitude();
             };
 
-//            static std::string hdf5_table_name(void) {
-//                return "vertices";
-//            };
-//            
-//            static void get_field_descs(std::vector<FieldDesc> &descs);
-//
-//            void read_data(const VertexData &in_data);
-//            void write_data(VertexData &out_data) const;
-//
-//            void read_ascii(std::istream &in_stream);
-//            void write_ascii(std::ostream &out_stream) const;
+            
+            static void get_field_descs(std::vector<FieldDesc> &descs);
+
+            void read_data(const VertexData &in_data);
+            void write_data(VertexData &out_data) const;
+
+            void read_ascii(std::istream &in_stream);
+            void write_ascii(std::ostream &out_stream) const;
     };
 
     // Squares, the functional members of Tsunami Square
     struct SquareData {
         UIndex              _id;
-        unsigned int        _is_boundary;
+        //unsigned int        _is_boundary;
         // _vertices for the vertex_id's for this square
         UIndex              _vertices[4];
         // _verts for the vertex (x,y,z) positions for this square
@@ -155,8 +157,9 @@ namespace tsunamisquares {
                 for (unsigned int i=0; i<4; ++i) _data._verts[i] = Vec<3>();
                 _data._velocity = _data._accel = Vec<2>();
 
-                _data._is_boundary = false;
-                _data._height = _data._friction =_data._density = std::numeric_limits<float>::quiet_NaN();
+                //_data._is_boundary = false;
+                _data._height = _data._friction = std::numeric_limits<float>::quiet_NaN();
+                _data._density = 1025.0; // sea water by default
             };
             
             void clear(void);
@@ -172,12 +175,12 @@ namespace tsunamisquares {
                 _data._id = id;
             };
             
-            bool is_boundary(void) const {
-                return _data._is_boundary;
-            };
-            void set_is_boundary(const bool &is_boundary) {
-                _data._is_boundary = is_boundary;
-            };
+//            bool is_boundary(void) const {
+//                return _data._is_boundary;
+//            };
+//            void set_is_boundary(const bool &is_boundary) {
+//                _data._is_boundary = is_boundary;
+//            };
             
             UIndex vertex(const unsigned int &v) const {
                 assert(v<4);
@@ -225,6 +228,13 @@ namespace tsunamisquares {
                 _data._accel = new_accel;
             };
             
+            float friction(void) const {
+                return _data._friction;
+            };
+            void set_friction(const float &new_friction) {
+                _data._friction = new_friction;
+            };
+            
             double area(void) const {
                 Vec<3> a,b;
                 // Compute area from vertex (x,y) position not using altitude
@@ -249,28 +259,26 @@ namespace tsunamisquares {
             };
 
             //! Get center point of this square (at sealevel so z=0)
-            Vec<3> center(void) const {
+            Vec<2> center(void) const {
                 Vec<3> c;
+                Vec<2> cent;
                 for (unsigned int i=0; i<4; ++i) c += _data._verts[i];
-                c[2] = 0.0;
-                return c / 4.0;
+                cent[0] = c[0];
+                cent[1] = c[1];
+                return cent / 4.0;
             };
 
-            //! Calculates the Euclidean distance between the 3D midpoint of this block and another block.
+            //! Calculates the Euclidean distance between the midpoint of this block and another block.
             double center_distance(const Square &other) const {
                 return (other.center() - this->center()).mag();
             };
 
-//            static std::string hdf5_table_name(void) {
-//                return "squares";
-//            };
-//            
-//            static void get_field_descs(std::vector<FieldDesc> &descs);
-//            void read_data(const SquareData &in_data);
-//            void write_data(SquareData &out_data) const;
-//
-//            void read_ascii(std::istream &in_stream);
-//            void write_ascii(std::ostream &out_stream) const;
+            static void get_field_descs(std::vector<FieldDesc> &descs);
+            void read_data(const SquareData &in_data);
+            void write_data(SquareData &out_data) const;
+
+            void read_ascii(std::istream &in_stream);
+            void write_ascii(std::ostream &out_stream) const;
     };
     
     // Iterator class for parsing through square objects
@@ -325,11 +333,6 @@ namespace tsunamisquares {
             LatLonDepth _base;
             double _min_lat, _max_lat, _min_lon, _max_lon;
             
-//            void read_square_hdf5(const hid_t &data_file);
-//            void read_vertex_hdf5(const hid_t &data_file);
-//            void write_square_hdf5(const hid_t &data_file) const;
-//            void write_vertex_hdf5(const hid_t &data_file) const;
-            
         public:
             Square &new_square(void);
             Vertex &new_vertex(void);
@@ -361,17 +364,22 @@ namespace tsunamisquares {
             
             void clear(void);
             
+            LatLonDepth getBase(void) const {
+                return _base;
+            }
+            
+            void get_bounds(LatLonDepth &minimum, LatLonDepth &maximum) const;
             void reset_base_coord(const LatLonDepth &new_base);
             
             SquareIDSet getSquareIDs(void) const;
             SquareIDSet getVertexIDs(void) const;
 
-            SquareIDSet neighbors(void) const;
-            
-//            int read_file_ascii(const std::string &file_name);
-//            int write_file_ascii(const std::string &file_name) const;            
-//            int read_file_hdf5(const std::string &file_name);
-//            int write_file_hdf5(const std::string &file_name) const;
+            SquareIDSet getNeighborIDs(const Vec<2> &location) const;
+            void printSquare(const UIndex square_id);
+            void printVertex(const UIndex vertex_id);
+            void info(void) const;
+            int read_file_ascii(const std::string &file_name);
+            int write_file_ascii(const std::string &file_name) const;            
 
     };
 }
