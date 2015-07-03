@@ -246,6 +246,11 @@ namespace tsunamisquares {
                 a[2]=b[2]=0.0;
                 return a.cross(b).mag();
             };
+        
+            double length(void) const {
+                // Compute the side length of the square
+                return std::sqrt(this->area());
+            }
 
             float volume(void) const {
                 return this->area()*this->height();
@@ -342,7 +347,8 @@ namespace tsunamisquares {
             SquareIDSet getSquareIDs(void) const;
             SquareIDSet getVertexIDs(void) const;
 
-            SquareIDSet getNeighborIDs(const Vec<2> &location) const;
+            std::map<double, UIndex> getNeighborIDs(const Vec<2> &location) const;
             void fillToSeaLevel(void);
+            void moveSquare(const UIndex &square_id);
     };
 }

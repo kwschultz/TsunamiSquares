@@ -45,11 +45,10 @@ tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const
     return vertex_id_set;
 }
 
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const tsunamisquares::Vec<2> &location) const {
-    std::map<double, UIndex>                  square_dists;
+std::map<double, tsunamisquares::UIndex> tsunamisquares::ModelWorld::getNeighborIDs(const tsunamisquares::Vec<2> &location) const {
+    std::map<double, UIndex>                  square_dists, neighbors;
     std::map<double, UIndex>::const_iterator  it;
     std::map<UIndex, Square>::const_iterator  sit;
-    SquareIDSet                               neighbors;
 
     // Compute distance from "location" to the center of each square.
     // Since we use a map, the distances will be ordered since they are the keys
@@ -60,7 +59,9 @@ tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const tsu
     
     // Grab the closest 4 squares and return their IDs
     for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
-        neighbors.insert(it->second);
+        double dist = it->first;
+        UIndex id = it->second;
+        neighbors.insert(std::make_pair(dist, id));
         if (neighbors.size() == 4) break;
     }
     
@@ -78,7 +79,29 @@ void tsunamisquares::ModelWorld::fillToSeaLevel(void) {
 }
 
 
-
+//// Move the water from a Square given its current velocity and acceleration.
+//// Partition the volume and momentum into the neighboring Squares.
+//void tsunamisquares::ModelWorld::moveSquare(const UIndex &square_id, const double dt) {
+//    Square this_square = this->square(square_id);
+//    Vec<2> current_velo, current_accel, current_pos, new_pos, new_velo;
+//    std::map<double, UIndex> neighbor_dists;
+//    std::map<double, UIndex>::const_iterator dit;
+//    
+//    current_pos = this_square.center();
+//    current_velo = this_square.velocity();
+//    current_accel = this_square.accel();
+//    
+//    new_pos = current_pos + dt*current_velo + 0.5*dt*dt*current_accel;
+//    new_velo = current_velo + dt*current_accel;
+//    
+//    // Compute
+//    for (dit=neighbor_dists.begin(); dit!=neighbor_dists.end(); ++dit){
+//        dit->first;
+//    }
+//    
+//    
+//    
+//}
 
 
 // ----------------------------------------------------------------------
