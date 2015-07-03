@@ -45,10 +45,11 @@ tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const
     return vertex_id_set;
 }
 
-std::map<double, tsunamisquares::UIndex> tsunamisquares::ModelWorld::getNeighborIDs(const tsunamisquares::Vec<2> &location) const {
-    std::map<double, UIndex>                  square_dists, neighbors;
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const tsunamisquares::Vec<2> &location) const {
+    std::map<double, UIndex>                  square_dists;
     std::map<double, UIndex>::const_iterator  it;
     std::map<UIndex, Square>::const_iterator  sit;
+    SquareIDSet                               neighbors;
 
     // Compute distance from "location" to the center of each square.
     // Since we use a map, the distances will be ordered since they are the keys
@@ -59,9 +60,7 @@ std::map<double, tsunamisquares::UIndex> tsunamisquares::ModelWorld::getNeighbor
     
     // Grab the closest 4 squares and return their IDs
     for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
-        double dist = it->first;
-        UIndex id = it->second;
-        neighbors.insert(std::make_pair(dist, id));
+        neighbors.insert(it->second);
         if (neighbors.size() == 4) break;
     }
     
@@ -79,29 +78,39 @@ void tsunamisquares::ModelWorld::fillToSeaLevel(void) {
 }
 
 
-//// Move the water from a Square given its current velocity and acceleration.
-//// Partition the volume and momentum into the neighboring Squares.
-//void tsunamisquares::ModelWorld::moveSquare(const UIndex &square_id, const double dt) {
-//    Square this_square = this->square(square_id);
-//    Vec<2> current_velo, current_accel, current_pos, new_pos, new_velo;
-//    std::map<double, UIndex> neighbor_dists;
-//    std::map<double, UIndex>::const_iterator dit;
-//    
-//    current_pos = this_square.center();
-//    current_velo = this_square.velocity();
-//    current_accel = this_square.accel();
-//    
-//    new_pos = current_pos + dt*current_velo + 0.5*dt*dt*current_accel;
-//    new_velo = current_velo + dt*current_accel;
-//    
-//    // Compute
-//    for (dit=neighbor_dists.begin(); dit!=neighbor_dists.end(); ++dit){
-//        dit->first;
-//    }
-//    
-//    
-//    
-//}
+// Move the water from a Square given its current velocity and acceleration.
+// Partition the volume and momentum into the neighboring Squares.
+void tsunamisquares::ModelWorld::moveSquare(const UIndex &square_id, const float dt) {
+    Square this_square = this->square(square_id);
+    Vec<2> current_velo, current_accel, current_pos, new_pos, new_velo;
+    SquareIDSet neighbors;
+    SquareIDSet::const_iterator sit;
+    
+    current_pos = this_square.center();
+    current_velo = this_square.velocity();
+    current_accel = this_square.accel();
+    
+    new_pos = current_pos + current_velo*dt + current_accel*0.5*dt*dt;
+    new_velo = current_velo + current_accel*dt;
+    
+    neighbors = this->getNeighborIDs(new_pos);
+    
+    // Compute height and momentum imparted to neighbors
+    for (sit=neighbors.begin(); sit!=neighbors.end(); ++sit) {
+        Square neighbor = this->square(*sit);
+        double dx = fabs(new_pos[0] - neighbor.center()[0]);
+        double dy = fabs(new_pos[1] - neighbor.center()[1]);
+        double dH = this_square.height()*(1-dx/this_square.length())*(1-dy/this_square.length());
+        // Update the amount of water in the neighboring square
+        double H = neighbor.height();
+        neighbor.set_height(H+dH);
+        Vec<2> dM = new_velo*this_square.height()*(1-dx/this_square.length())*(1-dy/this_square.length());
+        Vec<2> dv = dM/neighbor.height();
+        // Update the velocity in the neighboring square
+        Vec<2> V = neighbor.velocity();
+        neighbor.set_velocity(V+dv);
+    }
+}
 
 
 // ----------------------------------------------------------------------

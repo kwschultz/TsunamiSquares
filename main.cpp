@@ -26,9 +26,10 @@ int main (int argc, char **argv) {
     tsunamisquares::Vec<2>      accel, velo, loc; //auto-init to (0,0)
     std::map<double, tsunamisquares::UIndex> dists;
     std::map<double, tsunamisquares::UIndex>::iterator dit;
+    tsunamisquares::SquareIDSet::const_iterator it;
     tsunamisquares::SquareIDSet ids;
     
-    
+    // Clear the world
     this_world.clear();
 
     // Read in a model file
@@ -37,23 +38,29 @@ int main (int argc, char **argv) {
     // Grab the new square's data from the World
     this_world.info();
     
-//    loc = this_world.vertex(5).xy();
-//    dists = this_world.getNeighborIDs(loc);
-//    for (dit=dists.begin(); dit!=dists.end(); ++dit){
-//        std::cout << dit->first << " " << dit->second << std::endl;
-//    }
-    
-    
     // Put water into squares to bring water level up to sealevel.
     this_world.fillToSeaLevel();
-
-    //ids = this_world.getSquareIDs();
-    //for (it=ids.begin(); it!=ids.end(); ++it){
-    //    this_world.printSquare(*it);
-    //}
-
-    // Try to save the ModelWorld to a file
-    //this_world.write_file_ascii("test_file.txt");
+    
+    // Look at the squares
+    ids = this_world.getSquareIDs();
+    for (it=ids.begin(); it!=ids.end(); ++it){
+        this_world.printSquare(*it);
+    }
+    
+    
+    tsunamisquares::Square sq2 = this_world.square(2);
+    sq2.set_velocity(tsunamisquares::Vec<2>(1500,1500));
+    
+    float dt = 1.0; //seconds
+    
+    this_world.moveSquare(2, dt);
+    
+    // Look at the squares
+    ids = this_world.getSquareIDs();
+    for (it=ids.begin(); it!=ids.end(); ++it){
+        this_world.printSquare(*it);
+    }
     
     return 0;
 }
+
