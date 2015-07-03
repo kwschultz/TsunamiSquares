@@ -1,0 +1,40 @@
+# Number of elements
+# Number of vertices
+9 16
+# id: Unique ID of the square.
+# vertex_0: ID of vertex 0.
+# vertex_1: ID of vertex 1.
+# vertex_2: ID of vertex 2.
+# vertex_3: ID of vertex 3.
+# friction: Coefficient of friction for acceleration.
+# id vertex_0 vertex_1 vertex_2 vertex_3 friction 
+0 0 1 5 4 0 
+1 1 2 6 5 0 
+2 2 3 7 6 0 
+3 4 5 9 8 0 
+4 5 6 10 9 0 
+5 6 7 11 10 0 
+6 8 9 13 12 0 
+7 9 10 14 13 0 
+8 10 11 15 14 0 
+# id: Unique ID of the vertex.
+# latitude: Latitude of the vertex.
+# longitude: Longitude of the vertex.
+# altitude: Altitude of the vertex in meters (negative is below sea level).
+# id latitude longitude altitude 
+0 0 0 -1000 
+1 -0.027 0 -1000 
+2 -0.054 0 -1000
+3 -0.081 0 -1000
+4 0 0.027 -1000 
+5 -0.027 0.027 -1000
+6 -0.054 0.027 -1000
+7 -0.081 0.027 -1000
+8 0 0.054 -1000
+9 -0.027 0.054 -1000
+10 -0.054 0.054 -1000
+11 -0.081 0.054 -1000
+12 0 0.081 -1000
+13 -0.027 0.081 -1000
+14 -0.054 0.081 -1000
+15 -0.081 0.081 -1000
