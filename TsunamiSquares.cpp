@@ -45,7 +45,22 @@ tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const
     return vertex_id_set;
 }
 
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const tsunamisquares::Vec<2> &location) const {
+void tsunamisquares::ModelWorld::setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    square_it->second.set_velocity(new_velo);
+}
+
+void tsunamisquares::ModelWorld::setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    square_it->second.set_accel(new_accel);
+}
+
+void tsunamisquares::ModelWorld::setSquareHeight(const UIndex &square_id, const double &new_height) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    square_it->second.set_height(new_height);
+}
+
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const Vec<2> &location) const {
     std::map<double, UIndex>                  square_dists;
     std::map<double, UIndex>::const_iterator  it;
     std::map<UIndex, Square>::const_iterator  sit;
@@ -80,36 +95,78 @@ void tsunamisquares::ModelWorld::fillToSeaLevel(void) {
 
 // Move the water from a Square given its current velocity and acceleration.
 // Partition the volume and momentum into the neighboring Squares.
-void tsunamisquares::ModelWorld::moveSquare(const UIndex &square_id, const float dt) {
-    Square this_square = this->square(square_id);
-    Vec<2> current_velo, current_accel, current_pos, new_pos, new_velo;
-    SquareIDSet neighbors;
-    SquareIDSet::const_iterator sit;
+void tsunamisquares::ModelWorld::moveSquares(const float dt) {
+    std::map<UIndex, Square>::iterator sit;
+    bool debug = false;
     
-    current_pos = this_square.center();
-    current_velo = this_square.velocity();
-    current_accel = this_square.accel();
-    
-    new_pos = current_pos + current_velo*dt + current_accel*0.5*dt*dt;
-    new_velo = current_velo + current_accel*dt;
-    
-    neighbors = this->getNeighborIDs(new_pos);
-    
-    // Compute height and momentum imparted to neighbors
-    for (sit=neighbors.begin(); sit!=neighbors.end(); ++sit) {
-        Square neighbor = this->square(*sit);
-        double dx = fabs(new_pos[0] - neighbor.center()[0]);
-        double dy = fabs(new_pos[1] - neighbor.center()[1]);
-        double dH = this_square.height()*(1-dx/this_square.length())*(1-dy/this_square.length());
-        // Update the amount of water in the neighboring square
-        double H = neighbor.height();
-        neighbor.set_height(H+dH);
-        Vec<2> dM = new_velo*this_square.height()*(1-dx/this_square.length())*(1-dy/this_square.length());
-        Vec<2> dv = dM/neighbor.height();
-        // Update the velocity in the neighboring square
-        Vec<2> V = neighbor.velocity();
-        neighbor.set_velocity(V+dv);
+    // Initialize the updated height and velocity to zero. These are the containers
+    // used to keep track of the distributed height/velocity from moving squares.
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        sit->second.set_updated_height(0.0);
+        Vec<2> v;
+        v[0] = v[1] = 0.0;
+        sit->second.set_updated_velocity(v);
     }
+    
+    // Now go through each square and move the water, distribute to neighbors
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        Vec<2> current_velo, current_accel, current_pos, new_pos, new_velo;
+        SquareIDSet neighbors;
+        SquareIDSet::const_iterator nit;
+        
+        current_pos = sit->second.center();
+        current_velo = sit->second.velocity();
+        current_accel = sit->second.accel();
+        
+        // Move the square
+        new_pos = current_pos + current_velo*dt + current_accel*0.5*dt*dt;
+        new_velo = current_velo + current_accel*dt;
+        
+        // Find the 4 neighboring squares
+        neighbors = this->getNeighborIDs(new_pos);
+        
+        if (debug) {
+            std::cout << "current pos: " << current_pos << std::endl;
+            std::cout << "current velo: " << current_velo << std::endl;
+            std::cout << "current accel: " << current_accel << std::endl;
+            std::cout << "new pos: " << new_pos << std::endl;
+            std::cout << "new velo: " << new_velo << std::endl;
+        }
+        
+        // Compute height and momentum imparted to neighbors
+        for (nit=neighbors.begin(); nit!=neighbors.end(); ++nit) {
+            // This iterator will give us the neighbor square 
+            std::map<UIndex, Square>::iterator neighbor_it = _squares.find(*nit);
+            
+            double dx = fabs(new_pos[0] - neighbor_it->second.center()[0]);
+            double dy = fabs(new_pos[1] - neighbor_it->second.center()[1]);
+            double dH = sit->second.height()*(1-dx/sit->second.length())*(1-dy/sit->second.length());
+            
+            // Update the amount of water in the neighboring square (conserve volume, fixed area)
+            double H = neighbor_it->second.updated_height();
+            neighbor_it->second.set_updated_height(H+dH);
+            
+            // Update the velocity in the neighboring square (conserve momentum, update the velocity accordingly)
+            Vec<2> dM = new_velo*(sit->second.height())*(1-dx/sit->second.length())*(1-dy/sit->second.length());
+            Vec<2> V = neighbor_it->second.updated_velocity();
+            neighbor_it->second.set_updated_velocity(V+dM);
+            
+            if (debug) {
+                std::cout << "--- Neighbor : " << neighbor_it->second.id() << std::endl;
+                std::cout << "dx: " << dx << std::endl;
+                std::cout << "dy: " << dy << std::endl;
+                std::cout << "dH: " << dH << std::endl;
+                std::cout << "dM: " << dM << std::endl;
+            }
+        }
+    }
+    
+    // Loop again over squares to set new velocity and height from accumulated height and momentum
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        sit->second.set_height(sit->second.updated_height());
+        sit->second.set_velocity(sit->second.updated_velocity()/sit->second.updated_height());
+    }
+    
 }
 
 

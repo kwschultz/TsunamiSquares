@@ -42,24 +42,19 @@ int main (int argc, char **argv) {
     this_world.fillToSeaLevel();
     
     // Look at the squares
-    ids = this_world.getSquareIDs();
-    for (it=ids.begin(); it!=ids.end(); ++it){
-        this_world.printSquare(*it);
-    }
-    
-    
-    tsunamisquares::Square sq2 = this_world.square(2);
-    sq2.set_velocity(tsunamisquares::Vec<2>(1500,1500));
+//    ids = this_world.getSquareIDs();
+//    for (it=ids.begin(); it!=ids.end(); ++it){
+//        this_world.printSquare(*it);
+//    }
+
+    // Give Square 2 a velocity
+    this_world.setSquareVelocity(2,tsunamisquares::Vec<2>(1500,1500));
     
     float dt = 1.0; //seconds
     
-    this_world.moveSquare(2, dt);
-    
-    // Look at the squares
-    ids = this_world.getSquareIDs();
-    for (it=ids.begin(); it!=ids.end(); ++it){
-        this_world.printSquare(*it);
-    }
+    this_world.printSquare(2);
+    this_world.moveSquares(dt);
+    this_world.printSquare(2);
     
     return 0;
 }

@@ -144,6 +144,9 @@ namespace tsunamisquares {
         float               _height;
         float               _friction;
         float               _density;
+        // updated data are used to keep track of volume/momentum redistribution from other squares
+        float               _updated_height;
+        Vec<2>              _updated_velocity;
     };
 
     class Square : public ModelIO {
@@ -156,10 +159,10 @@ namespace tsunamisquares {
 
                 for (unsigned int i=0; i<4; ++i) _data._vertices[i] = INVALID_INDEX;
                 for (unsigned int i=0; i<4; ++i) _data._verts[i] = Vec<3>();
-                _data._velocity = _data._accel = Vec<2>();
+                _data._velocity = _data._accel = _data._updated_velocity = Vec<2>();
 
                 //_data._is_boundary = false;
-                _data._height = _data._friction = std::numeric_limits<float>::quiet_NaN();
+                _data._height = _data._friction = _data._updated_height = std::numeric_limits<float>::quiet_NaN();
                 _data._density = 1025.0; // sea water by default
             };
             
@@ -208,6 +211,13 @@ namespace tsunamisquares {
                 _data._height = new_height;
             };
             
+            float updated_height(void) const {
+                return _data._updated_height;
+            };
+            void set_updated_height(const float &new_height) {
+                _data._updated_height = new_height;
+            };
+            
             float density(void) const {
                 return _data._density;
             };
@@ -220,6 +230,13 @@ namespace tsunamisquares {
             };
             void set_velocity(const Vec<2> &new_velocity) {
                 _data._velocity = new_velocity;
+            };
+            
+            Vec<2> updated_velocity(void) const {
+                return _data._updated_velocity;
+            };
+            void set_updated_velocity(const Vec<2> &new_velocity) {
+                _data._updated_velocity = new_velocity;
             };
             
             Vec<2> accel(void) const {
@@ -347,8 +364,11 @@ namespace tsunamisquares {
             SquareIDSet getSquareIDs(void) const;
             SquareIDSet getVertexIDs(void) const;
 
+            void setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo);
+            void setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel);
+            void setSquareHeight(const UIndex &square_id, const double &new_height);
             SquareIDSet getNeighborIDs(const Vec<2> &location) const;
             void fillToSeaLevel(void);
-            void moveSquare(const UIndex &square_id, const float dt);
+            void moveSquares(const float dt);
     };
 }
