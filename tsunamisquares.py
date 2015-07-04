@@ -11,7 +11,7 @@ import matplotlib.animation as manimation
 # Load TsunamiSquares data
 sim_file = "test_out.txt"
 sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('x','f8'),('y','f8'), ('z','f8')])
-FPS = 10
+FPS = 20
 DPI = 100
 T_MAX,T_MIN = sim_data['time'].max(),sim_data['time'].min()
 T_STEP = np.unique(sim_data['time'])[1] - np.unique(sim_data['time'])[0]
@@ -30,7 +30,7 @@ split_data = np.split(sim_data, np.unique(sim_data['time']).shape[0])
 # Initialize movie writing stuff
 FFMpegWriter = manimation.writers['ffmpeg']
 metadata = dict(title='TsunamiSquares', artist='Matplotlib',
-        comment='I hope this works!')
+        comment='Bottom left to top right no accelerations.')
 writer = FFMpegWriter(fps=FPS, metadata=metadata)
 
 # Initialize the frame and axes
@@ -48,18 +48,18 @@ first_step = sim_data[ sim_data['time'] == T_MIN ]
 Ncols = np.unique(first_step['x']).shape[0]
 
 surface = None
-with writer.saving(fig, "TS_movie_test.mp4", DPI):
+with writer.saving(fig, "TS_move_across.mp4", DPI):
     for index in range(int(N_STEP)):
-        # Clear the plot
-        oldplot = surface
-        if oldplot is not None:
-            ax.collections.remove(oldplot)
+        # Clear the last surface to plot updated surface
+        previous_plot = surface
+        if previous_plot is not None:
+            ax.collections.remove(previous_plot)
         
         # Get the subset of data corresponding to current time
         this_step = split_data[index]
         
         print "step: "+str(index)+"  time: "+str(TIME)+" num_points: "+str(len(this_step))
-        #assert len(this_step['x']) > 0
+        assert len(this_step) > 0
 
         X = this_step['x'].reshape(-1, Ncols)
         Y = this_step['y'].reshape(-1, Ncols)

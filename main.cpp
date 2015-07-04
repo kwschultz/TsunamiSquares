@@ -36,12 +36,22 @@ int main (int argc, char **argv) {
     // Put water into squares to bring water level up to sealevel.
     this_world.fillToSeaLevel();
 
-    // Give Square 2 a velocity and larger height
-    this_world.setSquareVelocity(3,tsunamisquares::Vec<2>(500,500));
-    this_world.setSquareHeight(3,2000.0);
+    // Initial conditions
+    tsunamisquares::Vec<2> up_right = tsunamisquares::Vec<2>(100,100);
+    tsunamisquares::Vec<2> down_right = tsunamisquares::Vec<2>(100,-100);
+    tsunamisquares::Vec<2> down_left = tsunamisquares::Vec<2>(-100,-100);
+    tsunamisquares::Vec<2> up_left = tsunamisquares::Vec<2>(-100,100);
+    this_world.setSquareVelocity(0, down_right);
+    this_world.setSquareHeight(0,1500.0);
+    this_world.setSquareVelocity(3, up_right);
+    this_world.setSquareHeight(3,1500.0);
+    this_world.setSquareVelocity(12, down_left);
+    this_world.setSquareHeight(12,1500.0);
+    this_world.setSquareVelocity(15, up_left);
+    this_world.setSquareHeight(15,1500.0);
     
-    float dt = .1; //seconds
-    int N_steps = 30; //number of time steps
+    float dt = .01; //seconds
+    int N_steps = 100; //number of time steps
     float max_time = N_steps*dt;
     float time = 0.0;
     ids = this_world.getSquareIDs();
