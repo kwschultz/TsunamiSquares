@@ -23,64 +23,6 @@
 // ----------------------------------------------------------------------
 // -------------------- Square Functions --------------------------------
 // ----------------------------------------------------------------------
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getSquareIDs(void) const {
-    SquareIDSet square_id_set;
-    std::map<UIndex, Square>::const_iterator  sit;
-
-    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
-        square_id_set.insert(sit->second.id());
-    }
-
-    return square_id_set;
-}
-
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const {
-    SquareIDSet vertex_id_set;
-    std::map<UIndex, Vertex>::const_iterator  vit;
-
-    for (vit=_vertices.begin(); vit!=_vertices.end(); ++vit) {
-        vertex_id_set.insert(vit->second.id());
-    }
-
-    return vertex_id_set;
-}
-
-void tsunamisquares::ModelWorld::setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo) {
-    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
-    square_it->second.set_velocity(new_velo);
-}
-
-void tsunamisquares::ModelWorld::setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel) {
-    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
-    square_it->second.set_accel(new_accel);
-}
-
-void tsunamisquares::ModelWorld::setSquareHeight(const UIndex &square_id, const double &new_height) {
-    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
-    square_it->second.set_height(new_height);
-}
-
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const Vec<2> &location) const {
-    std::map<double, UIndex>                  square_dists;
-    std::map<double, UIndex>::const_iterator  it;
-    std::map<UIndex, Square>::const_iterator  sit;
-    SquareIDSet                               neighbors;
-
-    // Compute distance from "location" to the center of each square.
-    // Since we use a map, the distances will be ordered since they are the keys
-    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
-        double square_dist = sit->second.center().dist(location);
-        square_dists.insert(std::make_pair(square_dist, sit->second.id()));
-    }
-    
-    // Grab the closest 4 squares and return their IDs
-    for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
-        neighbors.insert(it->second);
-        if (neighbors.size() == 4) break;
-    }
-    
-    return neighbors;
-}
 
 // Set the height for all elements equal to the depth of the bathymetry below the center of the square.
 // Result is squares with just enough water so that the water sits at sea level.
@@ -106,6 +48,8 @@ void tsunamisquares::ModelWorld::moveSquares(const float dt) {
         Vec<2> v;
         v[0] = v[1] = 0.0;
         sit->second.set_updated_velocity(v);
+        // Initialize acceleration based on the current slope of the water surface
+        this->updateAcceleration(sit->second.id());
     }
     
     // Now go through each square and move the water, distribute to neighbors
@@ -123,7 +67,7 @@ void tsunamisquares::ModelWorld::moveSquares(const float dt) {
         new_velo = current_velo + current_accel*dt;
         
         // Find the 4 neighboring squares
-        neighbors = this->getNeighborIDs(new_pos);
+        neighbors = this->getNearestIDs(new_pos);
         
         if (debug) {
             std::cout << "current pos: " << current_pos << std::endl;
@@ -169,10 +113,186 @@ void tsunamisquares::ModelWorld::moveSquares(const float dt) {
     
 }
 
+// Interpolate the z coordinate given nearby points "vertices"
+// Using the nearest neighbor weighted interpolation with weight = distance^(p/2)
+double tsunamisquares::ModelWorld::NNinterpolate(const VectorList &vertices, const Vec<2> &point) const {
+    double z_numer = 0.0;
+    double z_denom = 0.0;
+    double p = 4.0;
+    
+    for (VectorList::size_type vid = 0; vid != vertices.size(); vid++) {
+        // If point is one of the vertices, return the z of that vertex
+        if (Vec<2>(vertices[vid][0],vertices[vid][1]) == point) return vertices[vid][2];
+        // Otherwise compute the weighted interpolation
+        double xi = vertices[vid][0];
+        double yi = vertices[vid][1];
+        double zi = vertices[vid][2];
+        double weight = pow((point[0]-xi)*(point[0]-xi) + (point[1]-yi)*(point[1]-yi), p/2.0);
+        z_numer += zi / weight;
+        z_denom += 1.0 / weight;
+    }
+    return z_numer/z_denom;
+}
+
+tsunamisquares::Vec<2> tsunamisquares::ModelWorld::getGradient(const UIndex &square_id) const {
+    std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
+    Vec<2> gradient, center_left, center_right, center_top, center_bottom;
+    VectorList neighborVerts;
+    
+    // Grab the nearest vertices around this square
+    neighborVerts = this->getNeighborVertexHeights(square_id);
+    
+    // Initialize the 4 points that will be used to approximate the slopes d/dx and d/dy
+    // for this square. These are the midpoints of the sides of the square.
+    Vec<2> center = square_it->second.center();
+    double L = square_it->second.length();
+    center_left   = Vec<2>(center[0]-L/2.0, center[1]);
+    center_right  = Vec<2>(center[0]+L/2.0, center[1]);
+    center_top    = Vec<2>(center[0], center[1]+L/2.0);
+    center_bottom = Vec<2>(center[0], center[1]-L/2.0);
+
+    double z_left   = this->NNinterpolate(neighborVerts, center_left);
+    double z_right  = this->NNinterpolate(neighborVerts, center_right);
+    double z_top    = this->NNinterpolate(neighborVerts, center_top);
+    double z_bottom = this->NNinterpolate(neighborVerts, center_bottom);
+    
+    gradient[0] = (z_right-z_left)/L;
+    gradient[1] = (z_top-z_bottom)/L;
+    
+    return gradient;
+}
+
+void tsunamisquares::ModelWorld::updateAcceleration(const UIndex &square_id) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    Vec<2> grav_accel, friction_accel, gradient;
+    float G = 9.80665; //mean gravitational acceleration at Earth's surface [NIST]
+    
+    // gravitational acceleration due to the slope of the water surface
+    gradient = this->getGradient(square_id);
+    grav_accel = gradient*G*(-1.0);
+    
+    // frictional acceleration from fluid particle interaction
+    friction_accel = square_it->second.velocity()*square_it->second.velocity().mag()*square_it->second.friction()/(-1.0*square_it->second.height());
+    
+    // Set the acceleration
+    square_it->second.set_accel(grav_accel + friction_accel);
+}
+
+void tsunamisquares::ModelWorld::setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    square_it->second.set_velocity(new_velo);
+}
+
+void tsunamisquares::ModelWorld::setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    square_it->second.set_accel(new_accel);
+}
+
+void tsunamisquares::ModelWorld::setSquareHeight(const UIndex &square_id, const double &new_height) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    square_it->second.set_height(new_height);
+}
+
+// Get the square_id for each of the 4 closest squares to some location = (x,y)
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNearestIDs(const Vec<2> &location) const {
+    std::map<double, UIndex>                  square_dists;
+    std::map<double, UIndex>::const_iterator  it;
+    std::map<UIndex, Square>::const_iterator  sit;
+    SquareIDSet                               neighbors;
+
+    // Compute distance from "location" to the center of each square.
+    // Since we use a map, the distances will be ordered since they are the keys
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        double square_dist = sit->second.center().dist(location);
+        square_dists.insert(std::make_pair(square_dist, sit->second.id()));
+    }
+    
+    // Grab the closest 4 squares and return their IDs
+    for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
+        neighbors.insert(it->second);
+        if (neighbors.size() == 4) break;
+    }
+    
+    return neighbors;
+}
+
+// Get the square_id for each of the 4 closest squares to some square square_id
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const UIndex &square_id) const {
+    std::map<double, UIndex>                  square_dists;
+    std::map<double, UIndex>::const_iterator  it;
+    std::map<UIndex, Square>::const_iterator  sit;
+    SquareIDSet                               neighbors;
+    std::map<UIndex, Square>::const_iterator  this_sit = _squares.find(square_id);
+
+    // Compute distance from center of the input square to the center of each other square.
+    // Since we use a map, the distances will be ordered since they are the keys
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        // Skip the square whose neighbors we're trying to find 
+        if (sit->second.id() != square_id) {
+            double square_dist = sit->second.center().dist(this_sit->second.center());
+            square_dists.insert(std::make_pair(square_dist, sit->second.id()));
+        }
+    }
+    
+    // Grab the closest 4 squares and return their IDs
+    for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
+        neighbors.insert(it->second);
+        if (neighbors.size() == 4) break;
+    }
+    
+    return neighbors;
+}
+
+// Grab the neighboring vertices for this square, set their height to be water_surface = altitude + water_height
+tsunamisquares::VectorList tsunamisquares::ModelWorld::getNeighborVertexHeights(const UIndex &square_id) const {
+    SquareIDSet         neighborIDs;
+    VectorList          neighborVerts;
+    std::map<UIndex, Square>::const_iterator  sit;
+    SquareIDSet::iterator it;
+    // TODO: Fix duplicate vertices
+    
+    // Grab the square IDs for the neighboring cells
+    neighborIDs = this->getNeighborIDs(square_id);
+
+
+    // TODO: Do not return dry vertices that are "uphill"
+    for (it=neighborIDs.begin(); it!=neighborIDs.end(); ++it) {
+        for (unsigned int j=0; j<4; ++j) {
+            sit = _squares.find(*it);
+            Vec<3> vertex = sit->second.vert(j);
+            // z coordinate is the altitude of the water surface
+            vertex[2] += sit->second.height();
+            neighborVerts.push_back(vertex);
+        }
+    }
+    return neighborVerts;
+}
 
 // ----------------------------------------------------------------------
 // -------------------- Model Building/Editing --------------------------
 // ----------------------------------------------------------------------
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getSquareIDs(void) const {
+    SquareIDSet square_id_set;
+    std::map<UIndex, Square>::const_iterator  sit;
+
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        square_id_set.insert(sit->second.id());
+    }
+
+    return square_id_set;
+}
+
+tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const {
+    SquareIDSet vertex_id_set;
+    std::map<UIndex, Vertex>::const_iterator  vit;
+
+    for (vit=_vertices.begin(); vit!=_vertices.end(); ++vit) {
+        vertex_id_set.insert(vit->second.id());
+    }
+
+    return vertex_id_set;
+}
+
 tsunamisquares::Square &tsunamisquares::ModelWorld::square(const UIndex &ind) throw(std::domain_error) {
     std::map<UIndex, Square>::iterator it = _squares.find(ind);
 

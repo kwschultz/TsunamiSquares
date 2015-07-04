@@ -368,8 +368,13 @@ namespace tsunamisquares {
             void setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo);
             void setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel);
             void setSquareHeight(const UIndex &square_id, const double &new_height);
-            SquareIDSet getNeighborIDs(const Vec<2> &location) const;
+            SquareIDSet getNearestIDs(const Vec<2> &location) const;
+            SquareIDSet getNeighborIDs(const UIndex &square_id) const;
+            VectorList getNeighborVertexHeights(const UIndex &square_id) const;
             void fillToSeaLevel(void);
             void moveSquares(const float dt);
+            Vec<2> getGradient(const UIndex &square_id) const;
+            double NNinterpolate(const VectorList &vertices, const Vec<2> &point) const;
+            void updateAcceleration(const UIndex &square_id);
     };
 }
