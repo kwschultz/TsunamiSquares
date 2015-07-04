@@ -178,6 +178,19 @@ void tsunamisquares::ModelWorld::updateAcceleration(const UIndex &square_id) {
     square_it->second.set_accel(grav_accel + friction_accel);
 }
 
+// Raise/lower the sea floor depth at each of the square's vertices by an amount "height_change"
+void tsunamisquares::ModelWorld::deformBottom(const UIndex &square_id, const double &height_change) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    Vec<3> new_vertex, old_vertex;
+
+    for (unsigned int i=0; i<4; ++i) {
+        old_vertex = square_it->second.vert(i);
+        new_vertex = old_vertex;
+        new_vertex[2] += height_change;
+        square_it->second.set_vert(i, new_vertex);
+    }
+}
+
 void tsunamisquares::ModelWorld::setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo) {
     std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
     square_it->second.set_velocity(new_velo);

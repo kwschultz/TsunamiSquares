@@ -203,6 +203,10 @@ namespace tsunamisquares {
                 assert(v<4);
                 _data._verts[v] = vertex.xyz();
             };
+            void set_vert(const unsigned int &v, const Vec<3> &vertex) {
+                assert(v<4);
+                _data._verts[v] = vertex;
+            };
             
             float height(void) const {
                 return _data._height;
@@ -376,5 +380,6 @@ namespace tsunamisquares {
             Vec<2> getGradient(const UIndex &square_id) const;
             double NNinterpolate(const VectorList &vertices, const Vec<2> &point) const;
             void updateAcceleration(const UIndex &square_id);
+            void deformBottom(const UIndex &square_id, const double &height_change);
     };
 }
