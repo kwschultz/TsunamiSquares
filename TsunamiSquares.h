@@ -296,11 +296,11 @@ namespace tsunamisquares {
                 return (other.center() - this->center()).mag();
             };
 
-            //! Calculates the depth (positive) at the center of the square using the z-coords from the vertices
+            //! Calculates the depth (positive above sealevel) at the center of the square using the z-coords from the vertices
             double center_depth(void) const {
                 double depth = 0.0;
                 for (unsigned int i=0; i<4; ++i) depth += _data._verts[i][2];
-                return fabs(depth)/4.0;
+                return depth/4.0;
             };
     
             static void get_field_descs(std::vector<FieldDesc> &descs);

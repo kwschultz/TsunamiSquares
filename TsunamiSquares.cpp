@@ -88,7 +88,7 @@ void tsunamisquares::ModelWorld::fillToSeaLevel(void) {
     std::map<UIndex, Square>::iterator     it;
 
     for (it=_squares.begin(); it!=_squares.end(); ++it) {
-        it->second.set_height(it->second.center_depth());
+        it->second.set_height(fabs(it->second.center_depth()));
     }
 }
 
@@ -568,7 +568,7 @@ void tsunamisquares::Square::write_ascii_outfile(std::ostream &out_stream, const
 
     for (i=0; i<2; ++i) out_stream << this->center()[i] << "\t\t";
 
-    out_stream << _data._height - this->center_depth() << "\t\t";
+    out_stream << _data._height + this->center_depth() << "\t\t";
 
     next_line(out_stream);
 }
