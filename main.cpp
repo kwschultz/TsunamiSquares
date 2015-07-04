@@ -40,8 +40,8 @@ int main (int argc, char **argv) {
     this_world.setSquareVelocity(3,tsunamisquares::Vec<2>(500,500));
     this_world.setSquareHeight(3,2000.0);
     
-    float dt = 1.0; //seconds
-    int N_steps = 3; //number of time steps
+    float dt = .1; //seconds
+    int N_steps = 30; //number of time steps
     float max_time = N_steps*dt;
     float time = 0.0;
     ids = this_world.getSquareIDs();
