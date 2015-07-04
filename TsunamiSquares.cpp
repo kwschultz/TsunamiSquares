@@ -360,11 +360,7 @@ void tsunamisquares::Square::get_field_descs(std::vector<FieldDesc> &descs) {
     field_desc.name = "friction";
     field_desc.details = "Coefficient of friction for acceleration.";
     descs.push_back(field_desc);
-
-//    field_desc.name = "is_boundary";
-//    field_desc.details = "Whether or not the square is along the boundary.";
-//    descs.push_back(field_desc);
-
+    
 }
 
 void tsunamisquares::Square::read_data(const SquareData &in_data) {
@@ -384,7 +380,7 @@ void tsunamisquares::Square::read_ascii(std::istream &in_stream) {
     for (i=0; i<4; ++i) ss >> _data._vertices[i];
 
     ss >> _data._friction;
-    //ss >> _data._is_boundary;
+
 }
 
 void tsunamisquares::Square::write_ascii(std::ostream &out_stream) const {
@@ -395,7 +391,6 @@ void tsunamisquares::Square::write_ascii(std::ostream &out_stream) const {
     for (i=0; i<4; ++i) out_stream << _data._vertices[i] << " ";
 
     out_stream << _data._friction << " ";
-    //out_stream << _data._is_boundary << " ";
 
     next_line(out_stream);
 }
@@ -565,3 +560,16 @@ int tsunamisquares::ModelWorld::write_file_ascii(const std::string &file_name) c
 
     return 0;
 }
+
+void tsunamisquares::Square::write_ascii_outfile(std::ostream &out_stream, const double &time) const {
+    unsigned int        i;
+
+    out_stream << time << "\t";
+
+    for (i=0; i<2; ++i) out_stream << this->center()[i] << "\t\t";
+
+    out_stream << _data._height - this->center_depth() << "\t\t";
+
+    next_line(out_stream);
+}
+

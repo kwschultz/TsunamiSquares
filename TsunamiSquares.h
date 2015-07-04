@@ -309,6 +309,7 @@ namespace tsunamisquares {
 
             void read_ascii(std::istream &in_stream);
             void write_ascii(std::ostream &out_stream) const;
+            void write_ascii_outfile(std::ostream &out_stream, const double &time) const;
     };
             
     typedef std::set<UIndex> SquareIDSet;
