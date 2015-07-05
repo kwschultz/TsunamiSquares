@@ -30,7 +30,12 @@ void tsunamisquares::ModelWorld::fillToSeaLevel(void) {
     std::map<UIndex, Square>::iterator     it;
 
     for (it=_squares.begin(); it!=_squares.end(); ++it) {
-        it->second.set_height(fabs(it->second.center_depth()));
+        // Add water if the altitude of the Square center is below sea level
+        if (it->second.center_depth() < 0.0) { 
+            it->second.set_height(fabs(it->second.center_depth()));
+        } else {
+            it->second.set_height(0.0);
+        }
     }
 }
 
@@ -118,7 +123,7 @@ void tsunamisquares::ModelWorld::moveSquares(const float dt) {
 double tsunamisquares::ModelWorld::NNinterpolate(const VectorList &vertices, const Vec<2> &point) const {
     double z_numer = 0.0;
     double z_denom = 0.0;
-    double p = 4.0;
+    double p = 6.0;
     
     for (VectorList::size_type vid = 0; vid != vertices.size(); vid++) {
         // If point is one of the vertices, return the z of that vertex
@@ -278,6 +283,7 @@ tsunamisquares::VectorList tsunamisquares::ModelWorld::getNeighborVertexHeights(
             neighborVerts.push_back(vertex);
         }
     }
+    
     return neighborVerts;
 }
 
