@@ -381,5 +381,6 @@ namespace tsunamisquares {
             double NNinterpolate(const VectorList &vertices, const Vec<2> &point) const;
             void updateAcceleration(const UIndex &square_id);
             void deformBottom(const UIndex &square_id, const double &height_change);
+            UIndex whichSquare(const Vec<2> &location) const;
     };
 }

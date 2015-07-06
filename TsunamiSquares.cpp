@@ -234,6 +234,23 @@ tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNearestIDs(const Vec<
     return neighbors;
 }
 
+// Get the square_id for each closest square to some location = (x,y)
+tsunamisquares::UIndex tsunamisquares::ModelWorld::whichSquare(const Vec<2> &location) const {
+    std::map<double, UIndex>                  square_dists;
+    std::map<UIndex, Square>::const_iterator  sit;
+    UIndex                               neighbor;
+
+    // Compute distance from "location" to the center of each square.
+    // Since we use a map, the distances will be ordered since they are the keys
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        double square_dist = sit->second.center().dist(location);
+        square_dists.insert(std::make_pair(square_dist, sit->second.id()));
+    }
+    
+    // Return the ID of the nearest square
+    return square_dists.begin()->second;
+}
+
 // Get the square_id for each of the 4 closest squares to some square square_id
 tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const UIndex &square_id) const {
     std::map<double, UIndex>                  square_dists;
