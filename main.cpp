@@ -36,31 +36,31 @@ int main (int argc, char **argv) {
     // Put water into squares to bring water level up to sealevel.
     this_world.fillToSeaLevel();
 
-    // Initial conditions
-    this_world.deformBottom(12,50.0);
-             
-    // -------- Prepare a run to write to file ----------------------               
-    float dt = .1; //seconds
-    int N_steps = 20; //number of time steps
-    float max_time = N_steps*dt;
-    float time = 0.0;
-    ids = this_world.getSquareIDs();
-    
-    // Open the output file
-    out_file.open(file_name.c_str());
-    // Write the header
-    out_file << "# time \t square_x \t square_y \t height \n";
-    while (time <= max_time) {
-        // Write the current state to file
-        for (it=ids.begin(); it!=ids.end(); ++it){
-            this_world.square(*it).write_ascii_outfile(out_file, time);
-        }
-        // Move the squares
-        this_world.moveSquares(dt);
-        time += dt;
-    }
-    out_file.close();
-    std::cout << "Results written to " << file_name << std::endl;
+//    // Initial conditions
+//    this_world.deformBottom(12,1.0);
+//             
+//    // -------- Prepare a run to write to file ----------------------               
+//    float dt = .001; //seconds
+//    int N_steps = 3; //number of time steps
+//    float max_time = N_steps*dt;
+//    float time = 0.0;
+//    ids = this_world.getSquareIDs();
+//    
+//    // Open the output file
+//    out_file.open(file_name.c_str());
+//    // Write the header
+//    out_file << "# time \t square_x \t square_y \t height \n";
+//    while (time <= max_time) {
+//        // Write the current state to file
+//        for (it=ids.begin(); it!=ids.end(); ++it){
+//            this_world.square(*it).write_ascii_outfile(out_file, time);
+//        }
+//        // Move the squares
+//        this_world.moveSquares(dt);
+//        time += dt;
+//    }
+//    out_file.close();
+//    std::cout << "Results written to " << file_name << std::endl;
     return 0;
 }
 
