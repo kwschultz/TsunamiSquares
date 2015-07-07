@@ -313,7 +313,6 @@ namespace tsunamisquares {
 
             void read_ascii(std::istream &in_stream);
             void write_ascii(std::ostream &out_stream) const;
-            void write_ascii_outfile(std::ostream &out_stream, const double &time) const;
     };
             
     typedef std::set<UIndex> SquareIDSet;
@@ -382,5 +381,7 @@ namespace tsunamisquares {
             void updateAcceleration(const UIndex &square_id);
             void deformBottom(const UIndex &square_id, const double &height_change);
             UIndex whichSquare(const Vec<2> &location) const;
+            void write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const;
+            Vec<2> getSquareCenterLatLon(const UIndex &square_id) const;
     };
 }

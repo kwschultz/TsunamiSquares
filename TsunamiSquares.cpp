@@ -717,14 +717,31 @@ int tsunamisquares::ModelWorld::write_file_ascii(const std::string &file_name) c
     return 0;
 }
 
-void tsunamisquares::Square::write_ascii_outfile(std::ostream &out_stream, const double &time) const {
+tsunamisquares::Vec<2> tsunamisquares::ModelWorld::getSquareCenterLatLon(const UIndex &square_id) const {
+    std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
+    Vec<2> centerLatLon;
+    
+    for (unsigned int i=0; i<4; ++i) {
+        std::map<UIndex, Vertex>::const_iterator vert_it = _vertices.find(square_it->second.vertex(i));
+        centerLatLon[0] += vert_it->second.lld().lat();
+        centerLatLon[1] += vert_it->second.lld().lon();
+    }
+    return centerLatLon/4.0;
+}
+
+
+void tsunamisquares::ModelWorld::write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const {
     unsigned int        i;
+    std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
 
     out_stream << time << "\t";
 
-    for (i=0; i<2; ++i) out_stream << this->center()[i] << "\t\t";
+    //
+    for (i=0; i<2; ++i) {
+        out_stream << this->getSquareCenterLatLon(square_id)[i] << "\t\t";
+    }
 
-    out_stream << _data._height + this->center_depth() << "\t\t";
+    out_stream << square_it->second.height() + square_it->second.center_depth() << "\t\t";
 
     next_line(out_stream);
 }
