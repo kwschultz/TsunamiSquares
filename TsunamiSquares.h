@@ -320,7 +320,7 @@ namespace tsunamisquares {
     
     
     // Class to contain all Squares and Bathymetry 
-    class ModelWorld : public ModelIO {
+    class World : public ModelIO {
         private:
             std::map<UIndex, Vertex>   _vertices;
             std::map<UIndex, Square>  _squares;

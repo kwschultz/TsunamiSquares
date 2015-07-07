@@ -26,7 +26,7 @@
 
 // Set the height for all elements equal to the depth of the bathymetry below the center of the square.
 // Result is squares with just enough water so that the water sits at sea level.
-void tsunamisquares::ModelWorld::fillToSeaLevel(void) {
+void tsunamisquares::World::fillToSeaLevel(void) {
     std::map<UIndex, Square>::iterator     it;
 
     for (it=_squares.begin(); it!=_squares.end(); ++it) {
@@ -42,7 +42,7 @@ void tsunamisquares::ModelWorld::fillToSeaLevel(void) {
 
 // Move the water from a Square given its current velocity and acceleration.
 // Partition the volume and momentum into the neighboring Squares.
-void tsunamisquares::ModelWorld::moveSquares(const float dt) {
+void tsunamisquares::World::moveSquares(const float dt) {
     std::map<UIndex, Square>::iterator sit;
     bool debug = false;
     
@@ -120,7 +120,7 @@ void tsunamisquares::ModelWorld::moveSquares(const float dt) {
 
 // Interpolate the z coordinate given nearby points "vertices"
 // Using the nearest neighbor weighted interpolation with weight = distance^(p/2)
-double tsunamisquares::ModelWorld::NNinterpolate(const VectorList &vertices, const Vec<2> &point) const {
+double tsunamisquares::World::NNinterpolate(const VectorList &vertices, const Vec<2> &point) const {
     double z_numer = 0.0;
     double z_denom = 0.0;
     double p = 6.0;
@@ -139,7 +139,7 @@ double tsunamisquares::ModelWorld::NNinterpolate(const VectorList &vertices, con
     return z_numer/z_denom;
 }
 
-tsunamisquares::Vec<2> tsunamisquares::ModelWorld::getGradient(const UIndex &square_id) const {
+tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_id) const {
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
     Vec<2> gradient, center_left, center_right, center_top, center_bottom;
     VectorList neighborVerts;
@@ -167,7 +167,7 @@ tsunamisquares::Vec<2> tsunamisquares::ModelWorld::getGradient(const UIndex &squ
     return gradient;
 }
 
-void tsunamisquares::ModelWorld::updateAcceleration(const UIndex &square_id) {
+void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
     std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
     Vec<2> grav_accel, friction_accel, gradient;
     float G = 9.80665; //mean gravitational acceleration at Earth's surface [NIST]
@@ -184,7 +184,7 @@ void tsunamisquares::ModelWorld::updateAcceleration(const UIndex &square_id) {
 }
 
 // Raise/lower the sea floor depth at each of the square's vertices by an amount "height_change"
-void tsunamisquares::ModelWorld::deformBottom(const UIndex &square_id, const double &height_change) {
+void tsunamisquares::World::deformBottom(const UIndex &square_id, const double &height_change) {
     std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
     Vec<3> new_vertex, old_vertex;
 
@@ -196,23 +196,23 @@ void tsunamisquares::ModelWorld::deformBottom(const UIndex &square_id, const dou
     }
 }
 
-void tsunamisquares::ModelWorld::setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo) {
+void tsunamisquares::World::setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo) {
     std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
     square_it->second.set_velocity(new_velo);
 }
 
-void tsunamisquares::ModelWorld::setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel) {
+void tsunamisquares::World::setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel) {
     std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
     square_it->second.set_accel(new_accel);
 }
 
-void tsunamisquares::ModelWorld::setSquareHeight(const UIndex &square_id, const double &new_height) {
+void tsunamisquares::World::setSquareHeight(const UIndex &square_id, const double &new_height) {
     std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
     square_it->second.set_height(new_height);
 }
 
 // Get the square_id for each of the 4 closest squares to some location = (x,y)
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNearestIDs(const Vec<2> &location) const {
+tsunamisquares::SquareIDSet tsunamisquares::World::getNearestIDs(const Vec<2> &location) const {
     std::map<double, UIndex>                  square_dists;
     std::map<double, UIndex>::const_iterator  it;
     std::map<UIndex, Square>::const_iterator  sit;
@@ -235,7 +235,7 @@ tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNearestIDs(const Vec<
 }
 
 // Get the square_id for each closest square to some location = (x,y)
-tsunamisquares::UIndex tsunamisquares::ModelWorld::whichSquare(const Vec<2> &location) const {
+tsunamisquares::UIndex tsunamisquares::World::whichSquare(const Vec<2> &location) const {
     std::map<double, UIndex>                  square_dists;
     std::map<UIndex, Square>::const_iterator  sit;
     UIndex                               neighbor;
@@ -252,7 +252,7 @@ tsunamisquares::UIndex tsunamisquares::ModelWorld::whichSquare(const Vec<2> &loc
 }
 
 // Get the square_id for each of the 4 closest squares to some square square_id
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const UIndex &square_id) const {
+tsunamisquares::SquareIDSet tsunamisquares::World::getNeighborIDs(const UIndex &square_id) const {
     std::map<double, UIndex>                  square_dists;
     std::map<double, UIndex>::const_iterator  it;
     std::map<UIndex, Square>::const_iterator  sit;
@@ -279,7 +279,7 @@ tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getNeighborIDs(const UIn
 }
 
 // Grab the neighboring vertices for this square, set their height to be water_surface = altitude + water_height
-tsunamisquares::VectorList tsunamisquares::ModelWorld::getNeighborVertexHeights(const UIndex &square_id) const {
+tsunamisquares::VectorList tsunamisquares::World::getNeighborVertexHeights(const UIndex &square_id) const {
     SquareIDSet         neighborIDs;
     VectorList          neighborVerts;
     std::map<UIndex, Square>::const_iterator  sit;
@@ -307,7 +307,7 @@ tsunamisquares::VectorList tsunamisquares::ModelWorld::getNeighborVertexHeights(
 // ----------------------------------------------------------------------
 // -------------------- Model Building/Editing --------------------------
 // ----------------------------------------------------------------------
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getSquareIDs(void) const {
+tsunamisquares::SquareIDSet tsunamisquares::World::getSquareIDs(void) const {
     SquareIDSet square_id_set;
     std::map<UIndex, Square>::const_iterator  sit;
 
@@ -318,7 +318,7 @@ tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getSquareIDs(void) const
     return square_id_set;
 }
 
-tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const {
+tsunamisquares::SquareIDSet tsunamisquares::World::getVertexIDs(void) const {
     SquareIDSet vertex_id_set;
     std::map<UIndex, Vertex>::const_iterator  vit;
 
@@ -329,40 +329,40 @@ tsunamisquares::SquareIDSet tsunamisquares::ModelWorld::getVertexIDs(void) const
     return vertex_id_set;
 }
 
-tsunamisquares::Square &tsunamisquares::ModelWorld::square(const UIndex &ind) throw(std::domain_error) {
+tsunamisquares::Square &tsunamisquares::World::square(const UIndex &ind) throw(std::domain_error) {
     std::map<UIndex, Square>::iterator it = _squares.find(ind);
 
-    if (it == _squares.end()) throw std::domain_error("tsunamisquares::ModelWorld::square");
+    if (it == _squares.end()) throw std::domain_error("tsunamisquares::World::square");
     else return it->second;
 }
 
-tsunamisquares::Vertex &tsunamisquares::ModelWorld::vertex(const UIndex &ind) throw(std::domain_error) {
+tsunamisquares::Vertex &tsunamisquares::World::vertex(const UIndex &ind) throw(std::domain_error) {
     std::map<UIndex, Vertex>::iterator it = _vertices.find(ind);
 
-    if (it == _vertices.end()) throw std::domain_error("tsunamisquares::ModelWorld::vertex");
+    if (it == _vertices.end()) throw std::domain_error("tsunamisquares::World::vertex");
     else return it->second;
 }
 
-tsunamisquares::Square &tsunamisquares::ModelWorld::new_square(void) {
+tsunamisquares::Square &tsunamisquares::World::new_square(void) {
     UIndex  max_ind = next_square_index();
     _squares.insert(std::make_pair(max_ind, Square()));
     _squares.find(max_ind)->second.set_id(max_ind);
     return _squares.find(max_ind)->second;
 }
 
-tsunamisquares::Vertex &tsunamisquares::ModelWorld::new_vertex(void) {
+tsunamisquares::Vertex &tsunamisquares::World::new_vertex(void) {
     UIndex  max_ind = next_vertex_index();
     _vertices.insert(std::make_pair(max_ind, Vertex()));
     _vertices.find(max_ind)->second.set_id(max_ind);
     return _vertices.find(max_ind)->second;
 }
 
-void tsunamisquares::ModelWorld::clear(void) {
+void tsunamisquares::World::clear(void) {
     _squares.clear();
     _vertices.clear();
 }
 
-void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
+void tsunamisquares::World::reset_base_coord(const LatLonDepth &new_base) {
     std::map<UIndex, Vertex>::iterator         it;
 
     for (it=_vertices.begin(); it!=_vertices.end(); ++it) {
@@ -372,7 +372,7 @@ void tsunamisquares::ModelWorld::reset_base_coord(const LatLonDepth &new_base) {
     _base = new_base;
 }
 
-void tsunamisquares::ModelWorld::insert(tsunamisquares::Square &new_square) {
+void tsunamisquares::World::insert(tsunamisquares::Square &new_square) {
     // We also want to set the Squares _verts to the (x,y,z) coords of its vertices
     for (unsigned int i=0; i<4; ++i) {
         new_square.set_vert(i, this->vertex(new_square.vertex(i)));
@@ -380,19 +380,19 @@ void tsunamisquares::ModelWorld::insert(tsunamisquares::Square &new_square) {
     _squares.insert(std::make_pair(new_square.id(), new_square));
 }
 
-void tsunamisquares::ModelWorld::insert(const tsunamisquares::Vertex &new_vertex) {
+void tsunamisquares::World::insert(const tsunamisquares::Vertex &new_vertex) {
     _vertices.insert(std::make_pair(new_vertex.id(), new_vertex));
 }
 
-size_t tsunamisquares::ModelWorld::num_squares(void) const {
+size_t tsunamisquares::World::num_squares(void) const {
     return _squares.size();
 }
 
-size_t tsunamisquares::ModelWorld::num_vertices(void) const {
+size_t tsunamisquares::World::num_vertices(void) const {
     return _vertices.size();
 }
 
-void tsunamisquares::ModelWorld::printSquare(const UIndex square_id) {
+void tsunamisquares::World::printSquare(const UIndex square_id) {
     Square this_square = this->square(square_id);
 
     std::cout << "~~~ Square " << this_square.id() << "~~~" << std::endl;
@@ -412,18 +412,18 @@ void tsunamisquares::ModelWorld::printSquare(const UIndex square_id) {
     }
 }
 
-void tsunamisquares::ModelWorld::printVertex(const UIndex vertex_id) {
+void tsunamisquares::World::printVertex(const UIndex vertex_id) {
     Vertex this_vert = this->vertex(vertex_id);
     std::cout << " ~ Vertex " << this_vert.id() << "~" << std::endl;
     std::cout << "position(xyz): " << this_vert.xyz() << std::endl; 
     std::cout << "position(lld): " << this_vert.lld() << std::endl; 
 }
 
-void tsunamisquares::ModelWorld::info(void) const{
-    std::cout << "ModelWorld: " << this->num_squares() << " squares, " << this->num_vertices() << " vertices." << std::endl;
+void tsunamisquares::World::info(void) const{
+    std::cout << "World: " << this->num_squares() << " squares, " << this->num_vertices() << " vertices." << std::endl;
 }
 
-void tsunamisquares::ModelWorld::get_bounds(LatLonDepth &minimum, LatLonDepth &maximum) const {
+void tsunamisquares::World::get_bounds(LatLonDepth &minimum, LatLonDepth &maximum) const {
     std::map<UIndex, Vertex>::const_iterator    it;
     double      min_lat, min_lon, min_alt;
     double      max_lat, max_lon, max_alt;
@@ -597,7 +597,7 @@ void tsunamisquares::Vertex::write_ascii(std::ostream &out_stream) const {
     next_line(out_stream);
 }
 
-int tsunamisquares::ModelWorld::read_file_ascii(const std::string &file_name) {
+int tsunamisquares::World::read_file_ascii(const std::string &file_name) {
     std::ifstream       in_file;
     unsigned int        i, j, num_squares, num_vertices;
     LatLonDepth         min_latlon, max_latlon;
@@ -635,7 +635,7 @@ int tsunamisquares::ModelWorld::read_file_ascii(const std::string &file_name) {
     get_bounds(min_latlon, max_latlon);
     min_latlon.set_altitude(0);
     reset_base_coord(min_latlon);
-    // Keep track of Lat/Lon bounds in the ModelWorld
+    // Keep track of Lat/Lon bounds in the World
     _min_lat = min_latlon.lat();
     _min_lon = min_latlon.lon();
     _max_lat = max_latlon.lat();
@@ -657,7 +657,7 @@ int tsunamisquares::ModelWorld::read_file_ascii(const std::string &file_name) {
     return 0;
 }
 
-int tsunamisquares::ModelWorld::write_file_ascii(const std::string &file_name) const {
+int tsunamisquares::World::write_file_ascii(const std::string &file_name) const {
     std::ofstream                                   out_file;
     std::vector<FieldDesc>                          descs;
     std::vector<FieldDesc>::iterator                dit;
@@ -717,7 +717,7 @@ int tsunamisquares::ModelWorld::write_file_ascii(const std::string &file_name) c
     return 0;
 }
 
-tsunamisquares::Vec<2> tsunamisquares::ModelWorld::getSquareCenterLatLon(const UIndex &square_id) const {
+tsunamisquares::Vec<2> tsunamisquares::World::getSquareCenterLatLon(const UIndex &square_id) const {
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
     Vec<2> centerLatLon;
     
@@ -730,7 +730,7 @@ tsunamisquares::Vec<2> tsunamisquares::ModelWorld::getSquareCenterLatLon(const U
 }
 
 
-void tsunamisquares::ModelWorld::write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const {
+void tsunamisquares::World::write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const {
     unsigned int        i;
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
 
