@@ -320,7 +320,7 @@ namespace tsunamisquares {
     
     
     // Class to contain all Squares and Bathymetry 
-    class ModelWorld : public ModelIO {
+    class World : public ModelIO {
         private:
             std::map<UIndex, Vertex>   _vertices;
             std::map<UIndex, Square>  _squares;
@@ -376,6 +376,7 @@ namespace tsunamisquares {
             VectorList getNeighborVertexHeights(const UIndex &square_id) const;
             void fillToSeaLevel(void);
             void moveSquares(const float dt);
+            void smoothSquares(void);
             Vec<2> getGradient(const UIndex &square_id) const;
             double NNinterpolate(const VectorList &vertices, const Vec<2> &point) const;
             void updateAcceleration(const UIndex &square_id);
