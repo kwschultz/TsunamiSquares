@@ -376,6 +376,7 @@ namespace tsunamisquares {
             VectorList getNeighborVertexHeights(const UIndex &square_id) const;
             void fillToSeaLevel(void);
             void moveSquares(const float dt);
+            void smoothSquares(void);
             Vec<2> getGradient(const UIndex &square_id) const;
             double NNinterpolate(const VectorList &vertices, const Vec<2> &point) const;
             void updateAcceleration(const UIndex &square_id);
