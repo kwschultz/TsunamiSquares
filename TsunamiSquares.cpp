@@ -85,7 +85,7 @@ void tsunamisquares::World::smoothSquares(void) {
 // Partition the volume and momentum into the neighboring Squares.
 void tsunamisquares::World::moveSquares(const float dt) {
     std::map<UIndex, Square>::iterator sit;
-    bool debug = true;
+    bool debug = false;
     
     // Initialize the updated height and velocity to zero. These are the containers
     // used to keep track of the distributed height/velocity from moving squares.
@@ -238,6 +238,8 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
         std::cout << "z_right: " << z_right << std::endl;
         std::cout << "z_top: " << z_top << std::endl;
         std::cout << "z_bot: " << z_bottom << std::endl;
+        std::cout << "d/dx " << gradient[0] << std::endl; 
+        std::cout << "d/dy " << gradient[1] << std::endl;
     }
     
     return gradient;
@@ -386,7 +388,7 @@ tsunamisquares::VectorList tsunamisquares::World::getNeighborVertexHeights(const
     VectorList          neighborVerts;
     std::map<UIndex, Square>::const_iterator  sit, orig;
     SquareIDSet::iterator it;
-    // TODO: Fix duplicate vertices
+    std::set<UIndex> addedVerts;
     
     // Grab the square IDs for the neighboring cells
     neighborIDs = getNeighborIDs(square_id);
@@ -400,24 +402,31 @@ tsunamisquares::VectorList tsunamisquares::World::getNeighborVertexHeights(const
         
         // z coordinate is the altitude of the water surface
         for (unsigned int j=0; j<4; ++j) {
-            Vec<3> vertex = sit->second.vert(j);
-            // For vertices that make up the square whose neighbors we're grabbing,
-            // Use the original square's height not the neighbors
-            bool matched_vertex = false;
-            for (unsigned int k=0; k<4; ++k) {
-                if (vertex == orig->second.vert(k)) {
-                    vertex[2] += orig->second.height();
-                    if (square_id == 12) {
-                        std::cout << "matched vertex " << k << " for square " << orig->first << std::endl;
-                        std::cout << "added height " << orig->second.height() << " to make " << vertex[2] << std::endl;
+            UIndex vertID = sit->second.vertex(j);
+            // Check if we have already used this vertex
+            const bool alreadyAdded = addedVerts.find(vertID) != addedVerts.end();
+            if (!alreadyAdded) {
+                addedVerts.insert(vertID);
+                Vec<3> vertex = sit->second.vert(j);
+                // For vertices that make up the square whose neighbors we're grabbing,
+                // Use the original square's height not the neighbors
+                bool matched_vertex = false;
+                for (unsigned int k=0; k<4; ++k) {
+                    if (vertex == orig->second.vert(k)) {
+                        vertex[2] += orig->second.height();
+                        //if (square_id == 12) {
+                        //    std::cout << "matched vertex " << k << " for square " << orig->first << std::endl;
+                        //    std::cout << "added height " << orig->second.height() << " to make " << vertex[2] << std::endl;
+                        //}
+                        matched_vertex = true;
                     }
-                    matched_vertex = true;
                 }
+                // If we didn't assign the original square's height to the vertex,
+                // use the square it belongs to.
+                if (!matched_vertex) vertex[2] += sit->second.height();
+                // Check that the vertex is not already
+                neighborVerts.push_back(vertex);
             }
-            // If we didn't assign the original square's height to the vertex,
-            // use the square it belongs to.
-            if (!matched_vertex) vertex[2] += sit->second.height();
-            neighborVerts.push_back(vertex);
         }
     }
     
