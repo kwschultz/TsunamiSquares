@@ -380,5 +380,7 @@ namespace tsunamisquares {
             UIndex whichSquare(const Vec<2> &location) const;
             void write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const;
             Vec<2> getSquareCenterLatLon(const UIndex &square_id) const;
+            void flatBottom(void);
+            void updateSquareVerts(void);
     };
 }

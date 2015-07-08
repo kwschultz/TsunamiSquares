@@ -241,6 +241,27 @@ void tsunamisquares::World::deformBottom(const UIndex &square_id, const double &
     }
 }
 
+//// Flatten the bottom to be the mean depth
+//void tsunamisquares::World::flattenBottom(void) {
+//    std::map<UIndex, Vertex>::iterator vit;
+//    std::map<UIndex, Square>::iterator sit;
+//    Vec<3> new_vertex, old_vertex;
+//    double meanDepth = 0.0;
+//    UIndex num_verts = num_vertices();
+//    
+//    for (vit=_vertices.begin(); vit!=_vertices.end(); ++vit) {
+//        meanDepth += vit->second.xyz()[2]/num_verts;
+//    }
+//    
+//    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+//        old_vertex = square_it->second.vert(i);
+//        new_vertex = old_vertex;
+//        new_vertex[2] += height_change;
+//        square_it->second.set_vert(i, new_vertex);
+//    }
+//
+//}
+
 void tsunamisquares::World::setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo) {
     std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
     square_it->second.set_velocity(new_velo);
@@ -347,6 +368,17 @@ tsunamisquares::VectorList tsunamisquares::World::getNeighborVertexHeights(const
     }
     
     return neighborVerts;
+}
+
+// Any time you change a vertex, call this function to communicate that change to the square
+void tsunamisquares::World::updateSquareVerts(void) {
+    UIndex num_squares = num_squares();
+    
+    for (i=0; i<num_squares; ++i) {
+        for (j=0; j<4; ++j) {
+            _squares[i].set_vert(j, _vertices[ _squares[i].vertex(j) ]);
+        }
+    }
 }
 
 // ----------------------------------------------------------------------
