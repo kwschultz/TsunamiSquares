@@ -175,69 +175,42 @@ void tsunamisquares::World::moveSquares(const float dt) {
     
 }
 
-// Interpolate the z coordinate given nearby points "vertices"
-// Using the nearest neighbor weighted interpolation with weight = distance^(p/2)
-double tsunamisquares::World::NNinterpolate(const VectorList &vertices, const Vec<2> &point) const {
-    double z_numer = 0.0;
-    double z_denom = 0.0;
-    double p = 6.0;
-    
-    for (VectorList::size_type vid = 0; vid != vertices.size(); vid++) {
-        // If point is one of the vertices, return the z of that vertex
-        if (Vec<2>(vertices[vid][0],vertices[vid][1]) == point) return vertices[vid][2];
-        // Otherwise compute the weighted interpolation
-        double xi = vertices[vid][0];
-        double yi = vertices[vid][1];
-        double zi = vertices[vid][2];
-        double weight = pow((point[0]-xi)*(point[0]-xi) + (point[1]-yi)*(point[1]-yi), p/2.0);
-        z_numer += zi / weight;
-        z_denom += 1.0 / weight;
-    }
-    return z_numer/z_denom;
-}
 
 tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_id) const {
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
     Vec<2> gradient, center_left, center_right, center_top, center_bottom;
-    VectorList neighborVerts;
-    VectorList::iterator nit;
-    
-    // Grab the nearest vertices around this square
-    neighborVerts = getNeighborVertexHeights(square_id);
-    if (square_id==12) {
-        std::cout << "neighbor heights:" << std::endl;
-        for (nit=neighborVerts.begin(); nit!=neighborVerts.end(); ++nit) {
-            std::cout << *nit << std::endl;
-        }
-    }
+    bool debug = false;
     
     // Initialize the 4 points that will be used to approximate the slopes d/dx and d/dy
-    // for this square. These are the midpoints of the sides of the square.
+    // for this square. These are the centers of the neighbor squares.
     Vec<2> center = square_it->second.center();
     double L = square_it->second.length();
-    center_left   = Vec<2>(center[0]-L/2.0, center[1]);
-    center_right  = Vec<2>(center[0]+L/2.0, center[1]);
-    center_top    = Vec<2>(center[0], center[1]+L/2.0);
-    center_bottom = Vec<2>(center[0], center[1]-L/2.0);
+    center_left   = Vec<2>(center[0]-L, center[1]);
+    center_right  = Vec<2>(center[0]+L, center[1]);
+    center_top    = Vec<2>(center[0], center[1]+L);
+    center_bottom = Vec<2>(center[0], center[1]-L);
+    
+    // Find the squareID for these locations
+    UIndex leftID = whichSquare(center_left);
+    UIndex rightID = whichSquare(center_right);
+    UIndex topID = whichSquare(center_top);
+    UIndex bottomID = whichSquare(center_bottom);
+    
+    double z_left = _squares.find(leftID)->second.level();
+    double z_right = _squares.find(rightID)->second.level();
+    double z_top = _squares.find(topID)->second.level();
+    double z_bottom = _squares.find(bottomID)->second.level();
 
-    double z_left   = NNinterpolate(neighborVerts, center_left);
-    double z_right  = NNinterpolate(neighborVerts, center_right);
-    double z_top    = NNinterpolate(neighborVerts, center_top);
-    double z_bottom = NNinterpolate(neighborVerts, center_bottom);
+    Vec<2> center_L = _squares.find(leftID)->second.center();
+    Vec<2> center_R = _squares.find(rightID)->second.center();
+    Vec<2> center_T = _squares.find(topID)->second.center();
+    Vec<2> center_B = _squares.find(bottomID)->second.center();
     
-    gradient[0] = (z_right-z_left)/L;
-    gradient[1] = (z_top-z_bottom)/L;
+    gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
+    gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
     
-    if (square_id==12) {
-        std::cout << "center left " << center_left << std::endl;
-        std::cout << "center right " << center_right << std::endl;
-        std::cout << "center top " << center_top << std::endl;
-        std::cout << "center bot " << center_bottom << std::endl;
-        std::cout << "interpolated points::" << std::endl;
-        std::cout << "z_left: " << z_left << std::endl;
-        std::cout << "z_right: " << z_right << std::endl;
-        std::cout << "z_top: " << z_top << std::endl;
-        std::cout << "z_bot: " << z_bottom << std::endl;
+    if (debug) {
+        std::cout << "square  " << square_id << std::endl;
         std::cout << "d/dx " << gradient[0] << std::endl; 
         std::cout << "d/dy " << gradient[1] << std::endl;
     }
@@ -380,57 +353,6 @@ tsunamisquares::SquareIDSet tsunamisquares::World::getNeighborIDs(const UIndex &
     }
     
     return neighbors;
-}
-
-// Grab the neighboring vertices for this square, set their height to be water_surface = altitude + water_height
-tsunamisquares::VectorList tsunamisquares::World::getNeighborVertexHeights(const UIndex &square_id) const {
-    SquareIDSet         neighborIDs;
-    VectorList          neighborVerts;
-    std::map<UIndex, Square>::const_iterator  sit, orig;
-    SquareIDSet::iterator it;
-    std::set<UIndex> addedVerts;
-    
-    // Grab the square IDs for the neighboring cells
-    neighborIDs = getNeighborIDs(square_id);
-    
-    // Grab the original square
-    orig = _squares.find(square_id);
-
-    // TODO: Do not return dry vertices that are "uphill"
-    for (it=neighborIDs.begin(); it!=neighborIDs.end(); ++it) {
-        sit = _squares.find(*it);
-        
-        // z coordinate is the altitude of the water surface
-        for (unsigned int j=0; j<4; ++j) {
-            UIndex vertID = sit->second.vertex(j);
-            // Check if we have already used this vertex
-            const bool alreadyAdded = addedVerts.find(vertID) != addedVerts.end();
-            if (!alreadyAdded) {
-                addedVerts.insert(vertID);
-                Vec<3> vertex = sit->second.vert(j);
-                // For vertices that make up the square whose neighbors we're grabbing,
-                // Use the original square's height not the neighbors
-                bool matched_vertex = false;
-                for (unsigned int k=0; k<4; ++k) {
-                    if (vertex == orig->second.vert(k)) {
-                        vertex[2] += orig->second.height();
-                        //if (square_id == 12) {
-                        //    std::cout << "matched vertex " << k << " for square " << orig->first << std::endl;
-                        //    std::cout << "added height " << orig->second.height() << " to make " << vertex[2] << std::endl;
-                        //}
-                        matched_vertex = true;
-                    }
-                }
-                // If we didn't assign the original square's height to the vertex,
-                // use the square it belongs to.
-                if (!matched_vertex) vertex[2] += sit->second.height();
-                // Check that the vertex is not already
-                neighborVerts.push_back(vertex);
-            }
-        }
-    }
-    
-    return neighborVerts;
 }
 
 // Any time you change a vertex, call this function to communicate that change to the square

@@ -304,6 +304,11 @@ namespace tsunamisquares {
                 for (unsigned int i=0; i<4; ++i) depth += _data._verts[i][2];
                 return depth/4.0;
             };
+            
+            // returns the altitude (sea level=0) of the water surface for this square
+            double level(void) const {
+                return _data._height + center_depth();
+            }
     
             static void get_field_descs(std::vector<FieldDesc> &descs);
             void read_ascii(std::istream &in_stream);
@@ -370,12 +375,10 @@ namespace tsunamisquares {
             void setSquareHeight(const UIndex &square_id, const double &new_height);
             SquareIDSet getNearestIDs(const Vec<2> &location) const;
             SquareIDSet getNeighborIDs(const UIndex &square_id) const;
-            VectorList getNeighborVertexHeights(const UIndex &square_id) const;
             void fillToSeaLevel(void);
             void moveSquares(const float dt);
             void smoothSquares(void);
             Vec<2> getGradient(const UIndex &square_id) const;
-            double NNinterpolate(const VectorList &vertices, const Vec<2> &point) const;
             void updateAcceleration(const UIndex &square_id);
             void deformBottom(const UIndex &square_id, const double &height_change);
             UIndex whichSquare(const Vec<2> &location) const;
