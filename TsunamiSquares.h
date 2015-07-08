@@ -123,11 +123,8 @@ namespace tsunamisquares {
 
             
             static void get_field_descs(std::vector<FieldDesc> &descs);
-
-            void read_data(const VertexData &in_data);
-            void write_data(VertexData &out_data) const;
-
             void read_ascii(std::istream &in_stream);
+            void read_bathymetry(std::istream &in_stream);
             void write_ascii(std::ostream &out_stream) const;
     };
 
@@ -308,9 +305,6 @@ namespace tsunamisquares {
             };
     
             static void get_field_descs(std::vector<FieldDesc> &descs);
-            void read_data(const SquareData &in_data);
-            void write_data(SquareData &out_data) const;
-
             void read_ascii(std::istream &in_stream);
             void write_ascii(std::ostream &out_stream) const;
     };
@@ -361,6 +355,8 @@ namespace tsunamisquares {
             
             int read_file_ascii(const std::string &file_name);
             int write_file_ascii(const std::string &file_name) const; 
+            
+            int read_bathymetry(const std::string &file_name);
             
             void get_bounds(LatLonDepth &minimum, LatLonDepth &maximum) const;
             void reset_base_coord(const LatLonDepth &new_base);

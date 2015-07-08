@@ -564,14 +564,6 @@ void tsunamisquares::Square::get_field_descs(std::vector<FieldDesc> &descs) {
     
 }
 
-void tsunamisquares::Square::read_data(const SquareData &in_data) {
-    memcpy(&_data, &in_data, sizeof(SquareData));
-}
-
-void tsunamisquares::Square::write_data(SquareData &out_data) const {
-    memcpy(&out_data, &_data, sizeof(SquareData));
-}
-
 void tsunamisquares::Square::read_ascii(std::istream &in_stream) {
     unsigned int        i;
     std::stringstream   ss(next_line(in_stream));
@@ -617,18 +609,18 @@ void tsunamisquares::Vertex::get_field_descs(std::vector<FieldDesc> &descs) {
 
 }
 
-void tsunamisquares::Vertex::read_data(const VertexData &in_data) {
-    memcpy(&_data, &in_data, sizeof(VertexData));
-}
-
-void tsunamisquares::Vertex::write_data(VertexData &out_data) const {
-    memcpy(&out_data, &_data, sizeof(VertexData));
-}
-
 void tsunamisquares::Vertex::read_ascii(std::istream &in_stream) {
     std::stringstream   ss(next_line(in_stream));
 
     ss >> _data._id;
+    ss >> _data._lat;
+    ss >> _data._lon;
+    ss >> _data._alt;
+}
+
+void tsunamisquares::Vertex::read_bathymetry(std::istream &in_stream) {
+    std::stringstream   ss(next_line(in_stream));
+    
     ss >> _data._lat;
     ss >> _data._lon;
     ss >> _data._alt;
@@ -789,5 +781,79 @@ void tsunamisquares::World::write_square_ascii(std::ostream &out_stream, const d
     out_stream << square_it->second.height() + square_it->second.center_depth() << "\t\t";
 
     next_line(out_stream);
+}
+
+int tsunamisquares::World::read_bathymetry(const std::string &file_name) {
+    std::ifstream   in_file;
+    UIndex          i, j, num_squares, num_vertices, num_lats, num_lons;
+    LatLonDepth     min_latlon, max_latlon;
+
+    // Clear the world first to avoid incorrectly mixing indices
+    clear();
+
+    in_file.open(file_name.c_str());
+
+    if (!in_file.is_open()) return -1;
+
+    // Read the first line describing the number of sections, etc
+    std::stringstream desc_line(next_line(in_file));
+    desc_line >> num_lats;
+    desc_line >> num_lons;
+    
+    // Set the number of vertices and squares
+    num_vertices = num_lats*num_lons;
+    num_squares = (num_lats-1)*(num_lons-1);
+
+    // Read vertices
+    for (i=0; i<num_vertices; ++i) {
+        Vertex     new_vert;
+        new_vert.read_bathymetry(in_file);
+        new_vert.set_id(i);
+        _vertices.insert(std::make_pair(new_vert.id(), new_vert));
+    }
+
+    in_file.close();
+    
+    // Assign the squares
+    for (i=0; i<num_squares; ++i) {
+        Square     new_square;
+        new_square.set_id(i);
+        // Assign vertices
+        UIndex v0 = i+(UIndex)(i/(num_lons-1));
+        UIndex v1 = v0+num_lons;
+        UIndex v2 = v1+1;
+        UIndex v3 = v0+1;
+        new_square.set_vertex(0,v0);
+        new_square.set_vertex(1,v1);
+        new_square.set_vertex(2,v2);
+        new_square.set_vertex(3,v3);
+        _squares.insert(std::make_pair(new_square.id(), new_square));
+    }
+    
+    
+    // Reset the internal Cartesian coordinate system
+    get_bounds(min_latlon, max_latlon);
+    min_latlon.set_altitude(0);
+    reset_base_coord(min_latlon);
+    // Keep track of Lat/Lon bounds in the World
+    _min_lat = min_latlon.lat();
+    _min_lon = min_latlon.lon();
+    _max_lat = max_latlon.lat();
+    _max_lon = max_latlon.lon();
+    
+    // Manually assign vertex xyz coords for the vertices given the new base lld
+    for (i=0; i<num_vertices; ++i) {
+        _vertices[i].set_lld(_vertices[i].lld(), getBase());
+    }
+    
+    // Manually assign vertex xyz coords for the vertices in the square objects
+    for (i=0; i<num_squares; ++i) {
+        for (j=0; j<4; ++j) {
+            _squares[i].set_vert(j, _vertices[ _squares[i].vertex(j) ]);
+        }
+    }
+    
+
+    return 0;
 }
 

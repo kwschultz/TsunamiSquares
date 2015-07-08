@@ -35,9 +35,13 @@ def grab_ETOPO1_subset(file_name, min_lat, max_lat, min_lon, max_lon):
 def write_grid(out_file_name, lats, lons, bathy):
     outfile = open(out_file_name, 'w')
     
-    outfile.write("# lat\tlon\talt\n")
-    for i in range(len(lons[0])):
-        for j in range(len(lons[1])):
+    outfile.write("# N_lats\n")
+    outfile.write("# N_lons\n")
+    outfile.write("{} {}\n".format(lons.shape[0],lons.shape[1]))
+    outfile.write("##################################\n")
+    # Write vertices from top left (Northwest) to bottom right (Southeast)
+    for i in list(reversed(range(lons.shape[0]))):
+        for j in range(lons.shape[1]):
             outfile.write("{}\t{}\t{}\n".format(lats[i][j],lons[i][j],bathy[i][j]))
     outfile.close()
     print("output written to {}".format(out_file_name))
@@ -49,9 +53,9 @@ if __name__ == "__main__":
     ETOPO1_FILE = "ETOPO1_Bed_g_gmt4.grd"    
     SAVE_NAME = "test.txt"
     MIN_LAT = 36.0
-    MAX_LAT = 36.1
+    MAX_LAT = 36.07
     MIN_LON = -125.0
-    MAX_LON = -124.9 
+    MAX_LON = -124.92
     lats,lons,bathy=grab_ETOPO1_subset(ETOPO1_FILE,min_lat=MIN_LAT,max_lat=MAX_LAT,min_lon=MIN_LON,max_lon=MAX_LON)
     write_grid(SAVE_NAME,lats,lons,bathy)
     
