@@ -155,12 +155,13 @@ namespace tsunamisquares {
                 _data._id = INVALID_INDEX;
 
                 for (unsigned int i=0; i<4; ++i) _data._vertices[i] = INVALID_INDEX;
-                for (unsigned int i=0; i<4; ++i) _data._verts[i] = Vec<3>();
-                _data._velocity = _data._accel = _data._updated_velocity = Vec<2>();
+                for (unsigned int i=0; i<4; ++i) _data._verts[i] = Vec<3>(0.0,0.0,0.0);
+                _data._velocity = _data._accel = _data._updated_velocity = Vec<2>(0.0,0.0);
 
                 //_data._is_boundary = false;
-                _data._height = _data._friction = _data._updated_height = std::numeric_limits<float>::quiet_NaN();
+                _data._height = _data._updated_height = std::numeric_limits<float>::quiet_NaN();
                 _data._density = 1025.0; // sea water by default
+                _data._friction = 0.0;
             };
             
             void clear(void);
@@ -380,7 +381,7 @@ namespace tsunamisquares {
             UIndex whichSquare(const Vec<2> &location) const;
             void write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const;
             Vec<2> getSquareCenterLatLon(const UIndex &square_id) const;
-            void flatBottom(void);
+            void flattenBottom(const double &depth);
             void updateSquareVerts(void);
     };
 }
