@@ -161,7 +161,7 @@ namespace tsunamisquares {
                 //_data._is_boundary = false;
                 _data._height = _data._updated_height = std::numeric_limits<float>::quiet_NaN();
                 _data._density = 1025.0; // sea water by default
-                _data._friction = 0.0;
+                _data._friction = 0.02;
             };
             
             void clear(void);
