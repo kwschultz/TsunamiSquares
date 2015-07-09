@@ -121,29 +121,24 @@ namespace tsunamisquares {
                 _data._alt = lld.altitude();
             };
 
-            
-            static void get_field_descs(std::vector<FieldDesc> &descs);
-            void read_ascii(std::istream &in_stream);
             void read_bathymetry(std::istream &in_stream);
-            void write_ascii(std::ostream &out_stream) const;
     };
 
     // Squares, the functional members of Tsunami Square
     struct SquareData {
         UIndex              _id;
         //unsigned int        _is_boundary;
-        // _vertices for the vertex_id's for this square
-        UIndex              _vertices[4];
-        // _verts for the vertex (x,y,z) positions for this square
-        Vec<3>              _verts[4];
+        // _vertex for the vertex_id for this square
+        UIndex              _vertex;
         Vec<2>              _velocity;
         Vec<2>              _accel;
-        float               _height;
-        float               _friction;
-        float               _density;
+        double              _height;
+        double              _friction;
+        double              _density;
+        double              _area;
         // updated data are used to keep track of volume/momentum redistribution from other squares
-        float               _updated_height;
-        Vec<2>              _updated_velocity;
+        double               _updated_height;
+        Vec<2>               _updated_velocity;
     };
 
     class Square : public ModelIO {
@@ -154,12 +149,11 @@ namespace tsunamisquares {
             Square(void) {
                 _data._id = INVALID_INDEX;
 
-                for (unsigned int i=0; i<4; ++i) _data._vertices[i] = INVALID_INDEX;
-                for (unsigned int i=0; i<4; ++i) _data._verts[i] = Vec<3>(0.0,0.0,0.0);
+                _data._vertex = INVALID_INDEX;
                 _data._velocity = _data._accel = _data._updated_velocity = Vec<2>(0.0,0.0);
 
                 //_data._is_boundary = false;
-                _data._height = _data._updated_height = std::numeric_limits<float>::quiet_NaN();
+                _data._height = _data._updated_height = _data._area  = std::numeric_limits<float>::quiet_NaN();
                 _data._density = 1025.0; // sea water by default
                 _data._friction = 0.02;
             };
@@ -177,33 +171,11 @@ namespace tsunamisquares {
                 _data._id = id;
             };
             
-//            bool is_boundary(void) const {
-//                return _data._is_boundary;
-//            };
-//            void set_is_boundary(const bool &is_boundary) {
-//                _data._is_boundary = is_boundary;
-//            };
-            
-            UIndex vertex(const unsigned int &v) const {
-                assert(v<4);
-                return _data._vertices[v];
+            UIndex vertex(void) const {
+                return _data._vertex;
             };
-            void set_vertex(const unsigned int &v, const UIndex &ind) {
-                assert(v<4);
-                _data._vertices[v] = ind;
-            };
-
-            Vec<3> vert(const unsigned int &v) const {
-                assert(v<4);
-                return _data._verts[v];
-            };
-            void set_vert(const unsigned int &v, const Vertex &vertex) {
-                assert(v<4);
-                _data._verts[v] = vertex.xyz();
-            };
-            void set_vert(const unsigned int &v, const Vec<3> &vertex) {
-                assert(v<4);
-                _data._verts[v] = vertex;
+            void set_vertex(const UIndex &ind) {
+                _data._vertex = ind;
             };
             
             float height(void) const {
@@ -248,71 +220,30 @@ namespace tsunamisquares {
                 _data._accel = new_accel;
             };
             
-            float friction(void) const {
+            double friction(void) const {
                 return _data._friction;
             };
-            void set_friction(const float &new_friction) {
+            void set_friction(const double &new_friction) {
                 _data._friction = new_friction;
             };
             
             double area(void) const {
-                Vec<3> a,b;
-                // Compute area from vertex (x,y) position not using altitude
-                a[0] = _data._verts[1][0]-_data._verts[0][0];
-                a[1] = _data._verts[1][1]-_data._verts[0][1];
-                b[0] = _data._verts[2][0]-_data._verts[0][0];
-                b[1] = _data._verts[2][1]-_data._verts[0][1];
-                a[2]=b[2]=0.0;
-                return a.cross(b).mag();
+                return _data._area;
+            };
+
+            void set_area(const double &new_area) {
+                _data._area = new_area;
             };
         
             double length(void) const {
                 // Compute the side length of the square
-                return sqrt(this->area());
+                return sqrt(_data._area);
             }
 
-            float volume(void) const {
-                return this->area()*this->height();
+            double volume(void) const {
+                return _data._area*_data._height;
             };
-
-            float mass(void) const {
-                return this->volume()*this->density();
-            };
-
-            Vec<2> momentum(void) const {
-                return _data._velocity*this->mass();
-            };
-
-            //! Get center point of this square (at sealevel so z=0)
-            Vec<2> center(void) const {
-                Vec<3> c;
-                Vec<2> cent;
-                for (unsigned int i=0; i<4; ++i) c += _data._verts[i];
-                cent[0] = c[0];
-                cent[1] = c[1];
-                return cent / 4.0;
-            };
-
-            //! Calculates the Euclidean distance between the midpoint of this block and another block.
-            double center_distance(const Square &other) const {
-                return (other.center() - this->center()).mag();
-            };
-
-            //! Calculates the depth (positive above sealevel) at the center of the square using the z-coords from the vertices
-            double center_depth(void) const {
-                double depth = 0.0;
-                for (unsigned int i=0; i<4; ++i) depth += _data._verts[i][2];
-                return depth/4.0;
-            };
-            
-            // returns the altitude (sea level=0) of the water surface for this square
-            double level(void) const {
-                return _data._height + center_depth();
-            }
     
-            static void get_field_descs(std::vector<FieldDesc> &descs);
-            void read_ascii(std::istream &in_stream);
-            void write_ascii(std::ostream &out_stream) const;
     };
             
     typedef std::set<UIndex> SquareIDSet;
@@ -359,9 +290,6 @@ namespace tsunamisquares {
             void printVertex(const UIndex vertex_id);
             void info(void) const;
             
-            int read_file_ascii(const std::string &file_name);
-            int write_file_ascii(const std::string &file_name) const; 
-            
             int read_bathymetry(const std::string &file_name);
             
             void get_bounds(LatLonDepth &minimum, LatLonDepth &maximum) const;
@@ -370,11 +298,10 @@ namespace tsunamisquares {
             SquareIDSet getSquareIDs(void) const;
             SquareIDSet getVertexIDs(void) const;
 
-            void setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo);
-            void setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel);
-            void setSquareHeight(const UIndex &square_id, const double &new_height);
             SquareIDSet getNearestIDs(const Vec<2> &location) const;
             SquareIDSet getNeighborIDs(const UIndex &square_id) const;
+            
+            // ======= Main functions =========
             void fillToSeaLevel(void);
             void moveSquares(const float dt);
             void smoothSquares(void);
@@ -382,9 +309,14 @@ namespace tsunamisquares {
             void updateAcceleration(const UIndex &square_id);
             void deformBottom(const UIndex &square_id, const double &height_change);
             UIndex whichSquare(const Vec<2> &location) const;
-            void write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const;
-            Vec<2> getSquareCenterLatLon(const UIndex &square_id) const;
             void flattenBottom(const double &depth);
-            void updateSquareVerts(void);
+            // ======= Square functions =========
+            Vec<2> squareCenter(const UIndex &square_id) const;
+            Vec<2> squareLatLon(const UIndex &square_id) const;
+            double squareDepth(const UIndex &square_id) const;
+            double squareLevel(const UIndex &square_id) const;
+            double squareMass(const UIndex &square_id) const;
+            Vec<2> squareMomentum(const UIndex &square_id) const;
+            void write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const;
     };
 }
