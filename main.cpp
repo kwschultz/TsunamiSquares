@@ -32,8 +32,10 @@ int main (int argc, char **argv) {
     this_world.clear();
     //this_world.read_file_ascii("test_file.txt");
     std::cout << "Reading...  Pacific.txt" << std::endl;
-    this_world.read_bathymetry("Pacific.txt");
+    this_world.read_bathymetry("Pacific_9.txt");
     this_world.info();
+
+    ids = this_world.getSquareIDs();
 
     // Flatten the bathymetry
     double new_depth = -1000.0;
@@ -43,46 +45,49 @@ int main (int argc, char **argv) {
     // Put water into squares to bring water level up to sealevel.
     std::cout << "Filling with water...";
     this_world.fillToSeaLevel();
-
+    
     // Initial conditions
     std::cout << "Deforming the bottom..." << std::endl;
-    this_world.deformBottom(422,1.0);
-    this_world.deformBottom(423,1.0);
-    this_world.deformBottom(392,1.0);
-    this_world.deformBottom(393,1.0);
+    this_world.deformBottom(4,1.0);
+
     
-    // -------- Prepare a run to write to file ----------------------               
-    float dt = .1; //seconds
-    int N_steps = 10; //number of time steps
-    int current_step = 0;
-    int update_step = 5;
-    float max_time = N_steps*dt;
-    float time = 0.0;
-    ids = this_world.getSquareIDs();
-    
-    // Open the output file
-    out_file.open(file_name.c_str());
-    // Write the header
-    out_file << "# time \t square_x \t square_y \t height \n";
-    std::cout << "Moving squares..";
-    while (time <= max_time) {
-        // If this is a writing step, print status
-        if (current_step%update_step == 0) {
-            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
-            std::cout << std::flush;
-        }
-    
-        // Write the current state to file
-        for (it=ids.begin(); it!=ids.end(); ++it){
-            this_world.write_square_ascii(out_file, time, *it);
-        }
-        // Move the squares
-        this_world.moveSquares(dt);
-        time += dt;
-        current_step += 1;
+    for (it=ids.begin(); it!=ids.end(); ++it){
+        this_world.printSquare(*it);
     }
-    out_file.close();
-    std::cout << std::endl << "Results written to " << file_name << std::endl;
+//
+//    
+//    // -------- Prepare a run to write to file ----------------------               
+//    float dt = .1; //seconds
+//    int N_steps = 10; //number of time steps
+//    int current_step = 0;
+//    int update_step = 5;
+//    float max_time = N_steps*dt;
+//    float time = 0.0;
+//    ids = this_world.getSquareIDs();
+//    
+//    // Open the output file
+//    out_file.open(file_name.c_str());
+//    // Write the header
+//    out_file << "# time \t square_x \t square_y \t height \n";
+//    std::cout << "Moving squares..";
+//    while (time <= max_time) {
+//        // If this is a writing step, print status
+//        if (current_step%update_step == 0) {
+//            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
+//            std::cout << std::flush;
+//        }
+//    
+//        // Write the current state to file
+//        for (it=ids.begin(); it!=ids.end(); ++it){
+//            this_world.write_square_ascii(out_file, time, *it);
+//        }
+//        // Move the squares
+//        this_world.moveSquares(dt);
+//        time += dt;
+//        current_step += 1;
+//    }
+//    out_file.close();
+//    std::cout << std::endl << "Results written to " << file_name << std::endl;
     return 0;
 }
 
