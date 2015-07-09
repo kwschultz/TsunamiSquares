@@ -22,7 +22,7 @@
 
 int main (int argc, char **argv) {
     // Initialize the world (where the squares live), squares and vertices
-    tsunamisquares::ModelWorld                  this_world;
+    tsunamisquares::World                  this_world;
     tsunamisquares::Vec<2>                      accel, velo, loc; //auto-init to (0,0)
     tsunamisquares::SquareIDSet::const_iterator it;
     tsunamisquares::SquareIDSet                 ids;
@@ -30,37 +30,59 @@ int main (int argc, char **argv) {
     const std::string                           file_name = "accel_middle_bump.txt";
     
     this_world.clear();
-    this_world.read_file_ascii("test_file.txt");
+    //this_world.read_file_ascii("test_file.txt");
+    std::cout << "Reading...  Pacific.txt" << std::endl;
+    this_world.read_bathymetry("Pacific.txt");
     this_world.info();
+
+    // Flatten the bathymetry
+    double new_depth = -1000.0;
+    std::cout << "Flattening the bottom...";
+    this_world.flattenBottom(new_depth);
     
     // Put water into squares to bring water level up to sealevel.
+    std::cout << "Filling with water...";
     this_world.fillToSeaLevel();
 
-//    // Initial conditions
-//    this_world.deformBottom(12,1.0);
-//             
-//    // -------- Prepare a run to write to file ----------------------               
-//    float dt = .001; //seconds
-//    int N_steps = 3; //number of time steps
-//    float max_time = N_steps*dt;
-//    float time = 0.0;
-//    ids = this_world.getSquareIDs();
-//    
-//    // Open the output file
-//    out_file.open(file_name.c_str());
-//    // Write the header
-//    out_file << "# time \t square_x \t square_y \t height \n";
-//    while (time <= max_time) {
-//        // Write the current state to file
-//        for (it=ids.begin(); it!=ids.end(); ++it){
-//            this_world.square(*it).write_ascii_outfile(out_file, time);
-//        }
-//        // Move the squares
-//        this_world.moveSquares(dt);
-//        time += dt;
-//    }
-//    out_file.close();
-//    std::cout << "Results written to " << file_name << std::endl;
+    // Initial conditions
+    std::cout << "Deforming the bottom..." << std::endl;
+    this_world.deformBottom(422,1.0);
+    this_world.deformBottom(423,1.0);
+    this_world.deformBottom(392,1.0);
+    this_world.deformBottom(393,1.0);
+    
+    // -------- Prepare a run to write to file ----------------------               
+    float dt = .1; //seconds
+    int N_steps = 10; //number of time steps
+    int current_step = 0;
+    int update_step = 5;
+    float max_time = N_steps*dt;
+    float time = 0.0;
+    ids = this_world.getSquareIDs();
+    
+    // Open the output file
+    out_file.open(file_name.c_str());
+    // Write the header
+    out_file << "# time \t square_x \t square_y \t height \n";
+    std::cout << "Moving squares..";
+    while (time <= max_time) {
+        // If this is a writing step, print status
+        if (current_step%update_step == 0) {
+            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
+            std::cout << std::flush;
+        }
+    
+        // Write the current state to file
+        for (it=ids.begin(); it!=ids.end(); ++it){
+            this_world.write_square_ascii(out_file, time, *it);
+        }
+        // Move the squares
+        this_world.moveSquares(dt);
+        time += dt;
+        current_step += 1;
+    }
+    out_file.close();
+    std::cout << std::endl << "Results written to " << file_name << std::endl;
     return 0;
 }
 

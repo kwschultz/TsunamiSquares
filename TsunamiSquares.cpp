@@ -196,23 +196,28 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
     UIndex topID = whichSquare(center_top);
     UIndex bottomID = whichSquare(center_bottom);
     
-    double z_left = _squares.find(leftID)->second.level();
-    double z_right = _squares.find(rightID)->second.level();
-    double z_top = _squares.find(topID)->second.level();
-    double z_bottom = _squares.find(bottomID)->second.level();
+    // TODO: Better boundary conditions. For now, just set no acceleration along boundary
+    if (leftID == square_id || rightID == square_id || topID == square_id || bottomID == square_id) {
+        gradient = Vec<2>(0.0,0.0);
+    } else {
+        double z_left = _squares.find(leftID)->second.level();
+        double z_right = _squares.find(rightID)->second.level();
+        double z_top = _squares.find(topID)->second.level();
+        double z_bottom = _squares.find(bottomID)->second.level();
 
-    Vec<2> center_L = _squares.find(leftID)->second.center();
-    Vec<2> center_R = _squares.find(rightID)->second.center();
-    Vec<2> center_T = _squares.find(topID)->second.center();
-    Vec<2> center_B = _squares.find(bottomID)->second.center();
-    
-    gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
-    gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
-    
-    if (debug) {
-        std::cout << "square  " << square_id << std::endl;
-        std::cout << "d/dx " << gradient[0] << std::endl; 
-        std::cout << "d/dy " << gradient[1] << std::endl;
+        Vec<2> center_L = _squares.find(leftID)->second.center();
+        Vec<2> center_R = _squares.find(rightID)->second.center();
+        Vec<2> center_T = _squares.find(topID)->second.center();
+        Vec<2> center_B = _squares.find(bottomID)->second.center();
+        
+        gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
+        gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
+        
+        if (debug) {
+            std::cout << "square  " << square_id << std::endl;
+            std::cout << "d/dx " << gradient[0] << std::endl; 
+            std::cout << "d/dy " << gradient[1] << std::endl;
+        }
     }
     
     return gradient;
