@@ -85,14 +85,14 @@ void tsunamisquares::World::fillToSeaLevel(void) {
 // Partition the volume and momentum into the neighboring Squares.
 void tsunamisquares::World::moveSquares(const float dt) {
     std::map<UIndex, Square>::iterator sit;
-    bool debug = false;
+    bool debug = true;
     
     // Initialize the updated height and velocity to zero. These are the containers
     // used to keep track of the distributed height/velocity from moving squares.
     for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
         sit->second.set_updated_height(0.0);
-        Vec<2> v; v[0] = v[1] = 0.0;
-        sit->second.set_updated_velocity(v);
+        Vec<2> m; m[0] = m[1] = 0.0;
+        sit->second.set_updated_momentum(m);
         // Set acceleration based on the current slope of the water surface
         updateAcceleration(sit->first);
         
@@ -134,16 +134,16 @@ void tsunamisquares::World::moveSquares(const float dt) {
                 double dx = fabs(new_pos[0] - squareCenter(neighbor_it->first)[0]);
                 double dy = fabs(new_pos[1] - squareCenter(neighbor_it->first)[1]);
                 double L = sit->second.length();
-                double dV = L*L*(sit->second.height())*(1-dx/L)*(1-dy/L);
+                double dV = squareVolume(sit->first)*(1-dx/L)*(1-dy/L);
                 // Update the amount of water in the neighboring square (conserve volume)
                 double H = neighbor_it->second.updated_height();
-                double L_n = neighbor_it->second.length();
-                neighbor_it->second.set_updated_height(H + dV/(L_n*L_n));
+                double A_n = neighbor_it->second.area();
+                neighbor_it->second.set_updated_height(H + dV/A_n);
                 
                 // Conserve momentum, update the velocity accordingly (at the end)
-                Vec<2> dM = new_velo*(sit->second.height())*(1-dx/L)*(1-dy/L)*L*L*(sit->second.density());
-                Vec<2> M = neighbor_it->second.updated_velocity();
-                neighbor_it->second.set_updated_velocity(M+dM);
+                Vec<2> dM = new_velo*(1-dx/L)*(1-dy/L)*squareMass(sit->first);
+                Vec<2> M  = neighbor_it->second.updated_momentum();
+                neighbor_it->second.set_updated_momentum(M+dM);
                 
                 if (debug) {
                     std::cout << "--- Neighbor : " << neighbor_it->second.id() << std::endl;
@@ -156,21 +156,14 @@ void tsunamisquares::World::moveSquares(const float dt) {
         } else {
             // For those squares that don't move, don't change anything.
             sit->second.set_updated_height(sit->second.height());
-            // Here the updated_velocity is really the momentum, divided by mass later
-            double L = sit->second.length();
-            double dens = sit->second.density();
-            double H = sit->second.updated_height();
-            sit->second.set_updated_velocity((sit->second.velocity())*L*L*dens*H);
+            sit->second.set_updated_momentum(squareMomentum(sit->first));
         }
     }
     
     // Loop again over squares to set new velocity and height from accumulated height and momentum
     for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
         sit->second.set_height(sit->second.updated_height());
-        double L = sit->second.length();
-        double dens = sit->second.density();
-        double H = sit->second.updated_height();
-        sit->second.set_velocity(sit->second.updated_velocity()/(H*dens*L*L));
+        sit->second.set_velocity(sit->second.updated_momentum()/squareMass(sit->first));
     }
     
 }
@@ -179,7 +172,7 @@ void tsunamisquares::World::moveSquares(const float dt) {
 tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_id) const {
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
     Vec<2> gradient, center_left, center_right, center_top, center_bottom;
-    bool debug = false;
+    bool debug = true;
     
     // Initialize the 4 points that will be used to approximate the slopes d/dx and d/dy
     // for this square. These are the centers of the neighbor squares.
@@ -367,6 +360,12 @@ double tsunamisquares::World::squareMass(const UIndex &square_id) const {
     return (sit->second.area())*(sit->second.height())*(sit->second.density());
 }
 
+double tsunamisquares::World::squareVolume(const UIndex &square_id) const {
+    std::map<UIndex, Square>::const_iterator  sit = _squares.find(square_id);
+    // area x height
+    return (sit->second.area())*(sit->second.height());
+}
+
 tsunamisquares::Vec<2> tsunamisquares::World::squareMomentum(const UIndex &square_id) const {
     std::map<UIndex, Square>::const_iterator  sit = _squares.find(square_id);
     // (x,y) of square center
@@ -382,6 +381,24 @@ tsunamisquares::Vec<2> tsunamisquares::World::squareLatLon(const UIndex &square_
     centerLatLon[1] = vit->second.lld().lon();
     
     return centerLatLon;
+}
+
+// ----------------------------------------------------------------------
+// -------------------- Functions to set initial conditions  ------------
+// ----------------------------------------------------------------------
+void tsunamisquares::World::setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    square_it->second.set_velocity(new_velo);
+}
+
+void tsunamisquares::World::setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    square_it->second.set_accel(new_accel);
+}
+
+void tsunamisquares::World::setSquareHeight(const UIndex &square_id, const double &new_height) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    square_it->second.set_height(new_height);
 }
 
 // ----------------------------------------------------------------------

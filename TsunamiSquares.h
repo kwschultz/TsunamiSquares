@@ -138,7 +138,7 @@ namespace tsunamisquares {
         double              _area;
         // updated data are used to keep track of volume/momentum redistribution from other squares
         double               _updated_height;
-        Vec<2>               _updated_velocity;
+        Vec<2>               _updated_momentum;
     };
 
     class Square : public ModelIO {
@@ -150,7 +150,7 @@ namespace tsunamisquares {
                 _data._id = INVALID_INDEX;
 
                 _data._vertex = INVALID_INDEX;
-                _data._velocity = _data._accel = _data._updated_velocity = Vec<2>(0.0,0.0);
+                _data._velocity = _data._accel = _data._updated_momentum = Vec<2>(0.0,0.0);
 
                 //_data._is_boundary = false;
                 _data._height = _data._updated_height = _data._area  = std::numeric_limits<float>::quiet_NaN();
@@ -206,11 +206,11 @@ namespace tsunamisquares {
                 _data._velocity = new_velocity;
             };
             
-            Vec<2> updated_velocity(void) const {
-                return _data._updated_velocity;
+            Vec<2> updated_momentum(void) const {
+                return _data._updated_momentum;
             };
-            void set_updated_velocity(const Vec<2> &new_velocity) {
-                _data._updated_velocity = new_velocity;
+            void set_updated_momentum(const Vec<2> &new_velocity) {
+                _data._updated_momentum = new_velocity;
             };
             
             Vec<2> accel(void) const {
@@ -316,7 +316,12 @@ namespace tsunamisquares {
             double squareDepth(const UIndex &square_id) const;
             double squareLevel(const UIndex &square_id) const;
             double squareMass(const UIndex &square_id) const;
+            double squareVolume(const UIndex &square_id) const;
             Vec<2> squareMomentum(const UIndex &square_id) const;
             void write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const;
+            // ======= Initial condition setup functions ======
+            void setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo);
+            void setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel);
+            void setSquareHeight(const UIndex &square_id, const double &new_height);
     };
 }
