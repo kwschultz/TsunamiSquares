@@ -18,8 +18,8 @@ def make_animation_2D(sim_data, FPS, DPI, ELEV, AZIM, T_MIN, T_MAX, T_STEP, N_ST
     lat_min,lat_max = sim_data['lat'].min(),sim_data['lat'].max()
     z_min,z_max = sim_data['z'].min(),sim_data['z'].max()
     cmap = plt.get_cmap('Blues_r')
-    #norm = mcolor.Normalize(vmin=z_min, vmax=z_max)
-    norm = mcolor.Normalize(vmin=-10, vmax=10)
+    norm = mcolor.Normalize(vmin=z_min, vmax=z_max)
+    #norm = mcolor.Normalize(vmin=-10, vmax=10)
     interp = 'none'
     
     # Split the data up into arrays for each time step
@@ -130,7 +130,7 @@ def make_animation_3D(sim_data, FPS, DPI, ELEV, AZIM, T_MIN, T_MAX, T_STEP, N_ST
 # --------------------------------------------------------------------------------
 # Load TsunamiSquares data
 sim_file = "accel_middle_bump.txt"
-save_file = "TS_"+sim_file.split(".")[0]+".mp4"
+save_file = "TS_"+sim_file.split(".")[0]+"_fullRange.mp4"
 sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('lat','f8'),('lon','f8'), ('z','f8')])
 FPS = 5
 DPI = 100
