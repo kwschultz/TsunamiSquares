@@ -176,53 +176,53 @@ void tsunamisquares::World::fillToSeaLevel(void) {
 //}
 //
 //
-//tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_id) const {
-//    std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
-//    Vec<2> gradient, center_left, center_right, center_top, center_bottom;
-//    bool debug = false;
-//    
-//    // Initialize the 4 points that will be used to approximate the slopes d/dx and d/dy
-//    // for this square. These are the centers of the neighbor squares.
-//    Vec<2> center = square_it->second.center();
-//    double L = square_it->second.length();
-//    center_left   = Vec<2>(center[0]-L, center[1]);
-//    center_right  = Vec<2>(center[0]+L, center[1]);
-//    center_top    = Vec<2>(center[0], center[1]+L);
-//    center_bottom = Vec<2>(center[0], center[1]-L);
-//    
-//    // Find the squareID for these locations
-//    UIndex leftID = whichSquare(center_left);
-//    UIndex rightID = whichSquare(center_right);
-//    UIndex topID = whichSquare(center_top);
-//    UIndex bottomID = whichSquare(center_bottom);
-//    
-//    // TODO: Better boundary conditions. For now, just set no acceleration along boundary
-//    if (leftID == square_id || rightID == square_id || topID == square_id || bottomID == square_id) {
-//        gradient = Vec<2>(0.0,0.0);
-//    } else {
-//        double z_left = _squares.find(leftID)->second.level();
-//        double z_right = _squares.find(rightID)->second.level();
-//        double z_top = _squares.find(topID)->second.level();
-//        double z_bottom = _squares.find(bottomID)->second.level();
-//
-//        Vec<2> center_L = _squares.find(leftID)->second.center();
-//        Vec<2> center_R = _squares.find(rightID)->second.center();
-//        Vec<2> center_T = _squares.find(topID)->second.center();
-//        Vec<2> center_B = _squares.find(bottomID)->second.center();
-//        
-//        gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
-//        gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
-//        
-//        if (debug) {
-//            std::cout << "square  " << square_id << std::endl;
-//            std::cout << "d/dx " << gradient[0] << std::endl; 
-//            std::cout << "d/dy " << gradient[1] << std::endl;
-//        }
-//    }
-//    
-//    return gradient;
-//}
-//
+tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_id) const {
+    std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
+    Vec<2> gradient, center_left, center_right, center_top, center_bottom;
+    bool debug = false;
+    
+    // Initialize the 4 points that will be used to approximate the slopes d/dx and d/dy
+    // for this square. These are the centers of the neighbor squares.
+    Vec<2> center = squareCenter(square_id);
+    double L = square_it->second.length();
+    center_left   = Vec<2>(center[0]-L, center[1]);
+    center_right  = Vec<2>(center[0]+L, center[1]);
+    center_top    = Vec<2>(center[0], center[1]+L);
+    center_bottom = Vec<2>(center[0], center[1]-L);
+    
+    // Find the squareID for these locations
+    UIndex leftID = whichSquare(center_left);
+    UIndex rightID = whichSquare(center_right);
+    UIndex topID = whichSquare(center_top);
+    UIndex bottomID = whichSquare(center_bottom);
+    
+    // TODO: Better boundary conditions. For now, just set no acceleration along boundary
+    if (leftID == square_id || rightID == square_id || topID == square_id || bottomID == square_id) {
+        gradient = Vec<2>(0.0,0.0);
+    } else {
+        double z_left = squareLevel(leftID);
+        double z_right = squareLevel(rightID);
+        double z_top = squareLevel(topID);
+        double z_bottom = squareLevel(bottomID);
+
+        Vec<2> center_L = squareCenter(leftID);
+        Vec<2> center_R = squareCenter(rightID);
+        Vec<2> center_T = squareCenter(topID);
+        Vec<2> center_B = squareCenter(bottomID);
+        
+        gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
+        gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
+        
+        if (debug) {
+            std::cout << "square  " << square_id << std::endl;
+            std::cout << "d/dx " << gradient[0] << std::endl; 
+            std::cout << "d/dy " << gradient[1] << std::endl;
+        }
+    }
+    
+    return gradient;
+}
+
 //void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
 //    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
 //    Vec<2> grav_accel, friction_accel, gradient;
@@ -291,50 +291,50 @@ void tsunamisquares::World::flattenBottom(const double &depth) {
 //    
 //    return neighbors;
 //}
-//
-//// Get the square_id for each closest square to some location = (x,y)
-//tsunamisquares::UIndex tsunamisquares::World::whichSquare(const Vec<2> &location) const {
-//    std::map<double, UIndex>                  square_dists;
-//    std::map<UIndex, Square>::const_iterator  sit;
-//    UIndex                               neighbor;
-//
-//    // Compute distance from "location" to the center of each square.
-//    // Since we use a map, the distances will be ordered since they are the keys
-//    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
-//        double square_dist = sit->second.center().dist(location);
-//        square_dists.insert(std::make_pair(square_dist, sit->second.id()));
-//    }
-//    
-//    // Return the ID of the nearest square
-//    return square_dists.begin()->second;
-//}
-//
-//// Get the square_id for each of the 4 closest squares to some square square_id
-//tsunamisquares::SquareIDSet tsunamisquares::World::getNeighborIDs(const UIndex &square_id) const {
-//    std::map<double, UIndex>                  square_dists;
-//    std::map<double, UIndex>::const_iterator  it;
-//    std::map<UIndex, Square>::const_iterator  sit;
-//    SquareIDSet                               neighbors;
-//    std::map<UIndex, Square>::const_iterator  this_sit = _squares.find(square_id);
-//
-//    // Compute distance from center of the input square to the center of each other square.
-//    // Since we use a map, the distances will be ordered since they are the keys
-//    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
-//        // Skip the square whose neighbors we're trying to find 
-//        if (sit->second.id() != square_id) {
-//            double square_dist = sit->second.center().dist(this_sit->second.center());
-//            square_dists.insert(std::make_pair(square_dist, sit->second.id()));
-//        }
-//    }
-//    
-//    // Grab the closest 4 squares and return their IDs
-//    for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
-//        neighbors.insert(it->second);
-//        if (neighbors.size() == 4) break;
-//    }
-//    
-//    return neighbors;
-//}
+
+// Get the square_id for each closest square to some location = (x,y)
+tsunamisquares::UIndex tsunamisquares::World::whichSquare(const Vec<2> &location) const {
+    std::map<double, UIndex>                  square_dists;
+    std::map<UIndex, Square>::const_iterator  sit;
+    UIndex                               neighbor;
+
+    // Compute distance from "location" to the center of each square.
+    // Since we use a map, the distances will be ordered since they are the keys
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        double square_dist = squareCenter(sit->first).dist(location);
+        square_dists.insert(std::make_pair(square_dist, sit->second.id()));
+    }
+    
+    // Return the ID of the nearest square
+    return square_dists.begin()->second;
+}
+
+// Get the square_id for each of the 4 closest squares to some square square_id
+tsunamisquares::SquareIDSet tsunamisquares::World::getNeighborIDs(const UIndex &square_id) const {
+    std::map<double, UIndex>                  square_dists;
+    std::map<double, UIndex>::const_iterator  it;
+    std::map<UIndex, Square>::const_iterator  sit;
+    SquareIDSet                               neighbors;
+    std::map<UIndex, Square>::const_iterator  this_sit = _squares.find(square_id);
+
+    // Compute distance from center of the input square to the center of each other square.
+    // Since we use a map, the distances will be ordered since they are the keys
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        // Skip the square whose neighbors we're trying to find 
+        if (sit->second.id() != square_id) {
+            double square_dist = squareCenter(sit->first).dist(squareCenter(this_sit->first));
+            square_dists.insert(std::make_pair(square_dist, sit->second.id()));
+        }
+    }
+    
+    // Grab the closest 4 squares and return their IDs
+    for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
+        neighbors.insert(it->second);
+        if (neighbors.size() == 4) break;
+    }
+    
+    return neighbors;
+}
 
 // ----------------------------------------------------------------------
 // -------------------- Single Square Functions -------------------------
