@@ -231,28 +231,6 @@ namespace tsunamisquares {
                 res /= a;
                 return res;
             };
-            
-            //! Multiply all elements of this vector by a constant.
-            void operator*=(const float &a) {
-                for (unsigned int i=0; i<dim; ++i) _x[i] *= a;
-            };
-            //! Multiply all elements of this vector by a constant.
-            const Vec<dim> operator* (const float &a) const {
-                Vec<dim> res(*this);
-                res *= a;
-                return res;
-            };
-
-            //! Divide all elements of this vector by a constant.
-            void operator/=(const float &a) {
-                for (unsigned int i=0; i<dim; ++i) _x[i] /= a;
-            };
-            //! Divide all elements of this vector by a constant.
-            const Vec<dim> operator/ (const float &a) const {
-                Vec<dim> res(*this);
-                res /= a;
-                return res;
-            };
 
             //! Test equality of vectors.
             bool operator==(const Vec<dim> &a) {
@@ -311,7 +289,7 @@ namespace tsunamisquares {
     std::ostream &operator<<(std::ostream &os, const Vec<2> &pt);
     std::ostream &operator<<(std::ostream &os, const Vec<3> &pt);
 
-    typedef std::vector< double > FloatList;
+    typedef std::vector< double > DoubleList;
     typedef std::vector< Vec<3> > VectorList;
 
     template <unsigned int ncols>
@@ -541,6 +519,6 @@ namespace tsunamisquares {
                 return bars*1e5;
             };
 
-            VectorList convertArray2xyz(const FloatList &lats, const FloatList &lons) const;
+            VectorList convertArray2xyz(const DoubleList &lats, const DoubleList &lons) const;
     };
 }

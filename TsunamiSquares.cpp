@@ -83,7 +83,7 @@ void tsunamisquares::World::fillToSeaLevel(void) {
 
 // Move the water from a Square given its current velocity and acceleration.
 // Partition the volume and momentum into the neighboring Squares.
-void tsunamisquares::World::moveSquares(const float dt) {
+void tsunamisquares::World::moveSquares(const double dt) {
     std::map<UIndex, Square>::iterator sit;
     bool debug = true;
     
@@ -112,19 +112,21 @@ void tsunamisquares::World::moveSquares(const float dt) {
         new_pos = current_pos + current_velo*dt + current_accel*0.5*dt*dt;
         new_velo = current_velo + current_accel*dt;
         
-        if (debug) {
-            std::cout << "---Moving Square " << sit->first << std::endl;
-            std::cout << "current pos: " << current_pos << std::endl;
-            std::cout << "current velo: " << current_velo << std::endl;
-            std::cout << "current accel: " << current_accel << std::endl;
-            std::cout << "new pos: " << new_pos << std::endl;
-            std::cout << "new velo: " << new_velo << std::endl;
-        }
-        
         // If this square moves, distribute the volume and momentum
         if (new_pos!=current_pos) {
+        
+            if (debug) {
+                std::cout << "---Moving Square " << sit->first << std::endl;
+                std::cout << "current pos: " << current_pos << std::endl;
+                std::cout << "current velo: " << current_velo << std::endl;
+                std::cout << "current accel: " << current_accel << std::endl;
+                std::cout << "new pos: " << new_pos << std::endl;
+                std::cout << "new velo: " << new_velo << std::endl;
+            }
+        
             // Find the 4 nearest squares to the new position
             neighbors = getNearestIDs(new_pos);
+            double fraction_sum = 0.0;
             
             // Compute height and momentum imparted to neighbors
             for (nit=neighbors.begin(); nit!=neighbors.end(); ++nit) {
@@ -145,14 +147,20 @@ void tsunamisquares::World::moveSquares(const float dt) {
                 Vec<2> M  = neighbor_it->second.updated_momentum();
                 neighbor_it->second.set_updated_momentum(M+dM);
                 
+                fraction_sum += (1-dx/L)*(1-dy/L);
+                
                 if (debug) {
                     std::cout << "--- Neighbor : " << neighbor_it->second.id() << std::endl;
-                    std::cout << "dx: " << dx << std::endl;
-                    std::cout << "dy: " << dy << std::endl;
+                    std::cout << "dx/L: " << dx/L << std::endl;
+                    std::cout << "dy/L: " << dy/L << std::endl;
                     std::cout << "dV: " << dV << std::endl;
                     std::cout << "dM: " << dM << std::endl;
+                    std::cout << "Volume fraction: " << (1-dx/L)*(1-dy/L) << std::endl;
                 }
             }
+            
+            std::cout << "summed Volume fraction: " << fraction_sum << std::endl;
+            
         } else {
             // For those squares that don't move, don't change anything.
             sit->second.set_updated_height(sit->second.height());
@@ -172,7 +180,7 @@ void tsunamisquares::World::moveSquares(const float dt) {
 tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_id) const {
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
     Vec<2> gradient, center_left, center_right, center_top, center_bottom;
-    bool debug = true;
+    bool debug = false;
     
     // Initialize the 4 points that will be used to approximate the slopes d/dx and d/dy
     // for this square. These are the centers of the neighbor squares.
@@ -219,7 +227,7 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
 void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
     std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
     Vec<2> grav_accel, friction_accel, gradient;
-    float G = 9.80665; //mean gravitational acceleration at Earth's surface [NIST]
+    double G = 9.80665; //mean gravitational acceleration at Earth's surface [NIST]
     
     // gravitational acceleration due to the slope of the water surface
     gradient = getGradient(square_id);

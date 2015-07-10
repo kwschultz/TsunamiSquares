@@ -60,7 +60,7 @@ namespace tsunamisquares {
     // Vertices that make up a Tsunami Square
     struct VertexData {
         UIndex  _id;
-        float   _lat, _lon, _alt;
+        double   _lat, _lon, _alt;
         //unsigned int _is_boundary;
     };
 
@@ -72,7 +72,7 @@ namespace tsunamisquares {
         public:
             Vertex(void) {
                 _data._id = INVALID_INDEX;
-                _data._lat = _data._lon = _data._alt = std::numeric_limits<float>::quiet_NaN();
+                _data._lat = _data._lon = _data._alt = std::numeric_limits<double>::quiet_NaN();
                 _pos = Vec<3>();
                 //_data._is_boundary = 0;
             };
@@ -153,7 +153,7 @@ namespace tsunamisquares {
                 _data._velocity = _data._accel = _data._updated_momentum = Vec<2>(0.0,0.0);
 
                 //_data._is_boundary = false;
-                _data._height = _data._updated_height = _data._area  = std::numeric_limits<float>::quiet_NaN();
+                _data._height = _data._updated_height = _data._area  = std::numeric_limits<double>::quiet_NaN();
                 _data._density = 1025.0; // sea water by default
                 _data._friction = 0.02;
             };
@@ -178,24 +178,24 @@ namespace tsunamisquares {
                 _data._vertex = ind;
             };
             
-            float height(void) const {
+            double height(void) const {
                 return _data._height;
             };
-            void set_height(const float &new_height) {
+            void set_height(const double &new_height) {
                 _data._height = new_height;
             };
             
-            float updated_height(void) const {
+            double updated_height(void) const {
                 return _data._updated_height;
             };
-            void set_updated_height(const float &new_height) {
+            void set_updated_height(const double &new_height) {
                 _data._updated_height = new_height;
             };
             
-            float density(void) const {
+            double density(void) const {
                 return _data._density;
             };
-            void set_density(const float &new_density) {
+            void set_density(const double &new_density) {
                 _data._density = new_density;
             };
             
@@ -303,7 +303,7 @@ namespace tsunamisquares {
             
             // ======= Main functions =========
             void fillToSeaLevel(void);
-            void moveSquares(const float dt);
+            void moveSquares(const double dt);
             void smoothSquares(void);
             Vec<2> getGradient(const UIndex &square_id) const;
             void updateAcceleration(const UIndex &square_id);

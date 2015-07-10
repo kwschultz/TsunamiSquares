@@ -159,11 +159,11 @@ tsunamisquares::Vec<3> tsunamisquares::Conversion::convert2xyz(const LatLonDepth
 }
 #endif
 
-tsunamisquares::VectorList tsunamisquares::Conversion::convertArray2xyz(const FloatList &lats, const FloatList &lons) const {
+tsunamisquares::VectorList tsunamisquares::Conversion::convertArray2xyz(const DoubleList &lats, const DoubleList &lons) const {
     tsunamisquares::VectorList conversions;
 
-    for (FloatList::size_type lat_id = 0; lat_id != lats.size(); lat_id++) {
-        for (FloatList::size_type lon_id = 0; lon_id != lons.size(); lon_id++) {
+    for (DoubleList::size_type lat_id = 0; lat_id != lats.size(); lat_id++) {
+        for (DoubleList::size_type lon_id = 0; lon_id != lons.size(); lon_id++) {
             conversions.push_back(convert2xyz(LatLonDepth(lats[lat_id],lons[lon_id],0.0)));
         }
     }
