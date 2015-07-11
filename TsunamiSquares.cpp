@@ -19,6 +19,9 @@
 // DEALINGS IN THE SOFTWARE.
 
 #include "TsunamiSquares.h"
+#include <cassert>
+
+#define assertThrow(COND, ERR_MSG) assert(COND);
 
 // ----------------------------------------------------------------------
 // -------------------- Main Functions --------------------------------
@@ -85,7 +88,7 @@ void tsunamisquares::World::fillToSeaLevel(void) {
 // Partition the volume and momentum into the neighboring Squares.
 void tsunamisquares::World::moveSquares(const double dt) {
     std::map<UIndex, Square>::iterator sit;
-    bool debug = true;
+    bool debug = false;
     
     // Initialize the updated height and velocity to zero. These are the containers
     // used to keep track of the distributed height/velocity from moving squares.
@@ -126,40 +129,83 @@ void tsunamisquares::World::moveSquares(const double dt) {
         
             // Find the 4 nearest squares to the new position
             neighbors = getNearestIDs(new_pos);
+            
+            // Init these for renormalizing the fractions
             double fraction_sum = 0.0;
+            std::map<UIndex, double> originalFractions;
+            std::map<UIndex, double> renormFractions;
+            std::map<UIndex, double>::iterator frac_it;
+            SquareIDSet to_erase;
+            
+            // Iterate through neighbors once to compute the fractional area overlap.
+            for (nit=neighbors.begin(); nit!=neighbors.end(); ++nit) {
+                // This iterator will give us the neighbor square 
+                std::map<UIndex, Square>::iterator neighbor_it = _squares.find(*nit);
+                double dx = fabs(new_pos[0] - squareCenter(neighbor_it->first)[0]);
+                double dy = fabs(new_pos[1] - squareCenter(neighbor_it->first)[1]);
+                double L = sit->second.length();
+                double this_fraction = (1-dx/L)*(1-dy/L);
+                //assertThrow(this_fraction < 1, "Area fraction must be less than 1.");
+                if (this_fraction > 0) {
+                    fraction_sum += this_fraction;
+                    originalFractions.insert(std::make_pair(*nit, this_fraction));
+                } else {
+                    // if the fraction is less than 0, then it is not a valid neighbor
+                    to_erase.insert(*nit);
+                }
+            }
+            
+            // Remove invalid neighbors from the neighbors set
+            for (nit=to_erase.begin(); nit!=to_erase.end(); ++nit) {
+                neighbors.erase(*nit);
+            }
+            
+            //std::cout << "summed (over " << originalFractions.size() << ") Volume fraction: " << fraction_sum << std::endl;
+            
+            // Then normalize these fractions to enforce conservation.
+            for (frac_it=originalFractions.begin(); frac_it!=originalFractions.end(); ++frac_it) {
+//                std::cout << "---Neighbor : " << frac_it->first << std::endl;
+//                std::cout << "original fraction : " << frac_it->second << std::endl; 
+//                std::cout << "renormed fraction : " << (frac_it->second)/fraction_sum << std::endl; 
+                //assertThrow((frac_it->second)/fraction_sum < 1, "Area fraction must be less than 1.");
+                renormFractions.insert(std::make_pair(frac_it->first, (frac_it->second)/fraction_sum));
+            }
+            
+            // Check that the normalized fractions sum exactly to 1
+            double renormSum = 0.0;
+            for (frac_it=renormFractions.begin(); frac_it!=renormFractions.end(); ++frac_it) {
+                renormSum += frac_it->second;
+            }
+//            std::cout.precision(17);
+//            std::cout << "renormed sum Volume fraction: " << std::fixed << renormSum << std::endl;
+//            assertThrow(renormSum == 1.0, "Renormed sum does not equal 1.0");
             
             // Compute height and momentum imparted to neighbors
             for (nit=neighbors.begin(); nit!=neighbors.end(); ++nit) {
                 // This iterator will give us the neighbor square 
                 std::map<UIndex, Square>::iterator neighbor_it = _squares.find(*nit);
+                // This iterates through the renormalized fractions
+                frac_it = renormFractions.find(*nit);
+                double areaFraction = frac_it->second;
                 
-                double dx = fabs(new_pos[0] - squareCenter(neighbor_it->first)[0]);
-                double dy = fabs(new_pos[1] - squareCenter(neighbor_it->first)[1]);
-                double L = sit->second.length();
-                double dV = squareVolume(sit->first)*(1-dx/L)*(1-dy/L);
                 // Update the amount of water in the neighboring square (conserve volume)
+                double dV = squareVolume(sit->first)*areaFraction;
                 double H = neighbor_it->second.updated_height();
                 double A_n = neighbor_it->second.area();
                 neighbor_it->second.set_updated_height(H + dV/A_n);
                 
                 // Conserve momentum, update the velocity accordingly (at the end)
-                Vec<2> dM = new_velo*(1-dx/L)*(1-dy/L)*squareMass(sit->first);
+                Vec<2> dM = new_velo*areaFraction*squareMass(sit->first);
                 Vec<2> M  = neighbor_it->second.updated_momentum();
                 neighbor_it->second.set_updated_momentum(M+dM);
                 
-                fraction_sum += (1-dx/L)*(1-dy/L);
-                
                 if (debug) {
                     std::cout << "--- Neighbor : " << neighbor_it->second.id() << std::endl;
-                    std::cout << "dx/L: " << dx/L << std::endl;
-                    std::cout << "dy/L: " << dy/L << std::endl;
                     std::cout << "dV: " << dV << std::endl;
                     std::cout << "dM: " << dM << std::endl;
-                    std::cout << "Volume fraction: " << (1-dx/L)*(1-dy/L) << std::endl;
+                    std::cout << "Area fraction: " << areaFraction << std::endl;
                 }
             }
-            
-            std::cout << "summed Volume fraction: " << fraction_sum << std::endl;
             
         } else {
             // For those squares that don't move, don't change anything.
@@ -669,26 +715,37 @@ int tsunamisquares::World::read_bathymetry(const std::string &file_name) {
         new_square.set_vertex(i);
         // Assign the area from the distance to neighboring vertices.
         // Cases are for the edges of the model.
-        double A, B;
-        int row = (int)(i/num_lons);
-        int col = (int)(i%num_lons);
-        if (col==num_lons-1 && row!=num_lats-1) {
-            // right edge, not bottom row
-            A = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
-            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
-        } else if (row==num_lats-1 && col!=num_lons-1) {
-            // bottom row not right edge
-            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
-            B = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
-        } else if (row==num_lats-1 && col==num_lons-1) {
-            // bottom right corner
-            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
-            B = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
+//        double A, B;
+//        int row = (int)(i/num_lons);
+//        int col = (int)(i%num_lons);
+//        if (col==num_lons-1 && row!=num_lats-1) {
+//            // right edge, not bottom row
+//            A = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
+//            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
+//        } else if (row==num_lats-1 && col!=num_lons-1) {
+//            // bottom row not right edge
+//            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
+//            B = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
+//        } else if (row==num_lats-1 && col==num_lons-1) {
+//            // bottom right corner
+//            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
+//            B = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
+//        } else {
+//            A = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
+//            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
+//        }
+//        new_square.set_area(A*B);
+
+        // TEMP FIX TO FORCE REGULAR GRID
+        if (i==0) {
+            double A = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
+            double B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
+            new_square.set_area(A*B);
         } else {
-            A = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
-            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
+            new_square.set_area(_squares[0].area());
         }
-        new_square.set_area(A*B);
+
+        
         _squares.insert(std::make_pair(new_square.id(), new_square));
     }
     

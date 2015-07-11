@@ -94,12 +94,13 @@ namespace tsunamisquares {
                 return LatLonDepth(_data._lat, _data._lon, _data._alt);
             };
             void set_lld(const LatLonDepth &lld, const LatLonDepth &base) {
-                Conversion c(base);
-                Vec<3> xyz = c.convert2xyz(lld);
+                // TEMPORARY FIX TO LET (X,Y,Z) = (LON,LAT,ALT)
+                //Conversion c(base);
+                //Vec<3> xyz = c.convert2xyz(lld);
                 _data._lat = lld.lat();
                 _data._lon = lld.lon();
                 _data._alt = lld.altitude();
-                _pos = xyz;
+                _pos = Vec<3>(lld.lon(), lld.lat(), lld.altitude());
             };
 
             Vec<3> xyz(void) const {
