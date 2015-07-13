@@ -132,7 +132,8 @@ namespace tsunamisquares {
         double              _height;
         double              _friction;
         double              _density;
-        double              _area;
+        double              _Lx;
+        double              _Ly;
         // updated data are used to keep track of volume/momentum redistribution from other squares
         double               _updated_height;
         Vec<2>               _updated_momentum;
@@ -148,7 +149,7 @@ namespace tsunamisquares {
 
                 _data._vertex = INVALID_INDEX;
                 _data._velocity = _data._accel = _data._updated_momentum = Vec<2>(0.0,0.0);
-                _data._height = _data._updated_height = _data._area  = std::numeric_limits<double>::quiet_NaN();
+                _data._height = _data._updated_height = _data._Lx = _data._Ly  = std::numeric_limits<double>::quiet_NaN();
                 _data._density = 1025.0; // sea water by default
                 _data._friction = 0.02;
             };
@@ -223,20 +224,24 @@ namespace tsunamisquares {
             };
             
             double area(void) const {
-                return _data._area;
-            };
-
-            void set_area(const double &new_area) {
-                _data._area = new_area;
+                return _data._Lx*_data._Ly;
             };
         
-            double length(void) const {
-                // Compute the side length of the square
-                return sqrt(_data._area);
+            double Lx(void) const {
+                return _data._Lx;
+            }
+            void set_Lx(const double &new_Lx) {
+                _data._Lx = new_Lx;
+            }
+            double Ly(void) const {
+                return _data._Ly;
+            }
+            void set_Ly(const double &new_Ly) {
+                _data._Ly = new_Ly;
             }
 
             double volume(void) const {
-                return _data._area*_data._height;
+                return _data._Lx*_data._Ly*_data._height;
             };
     
     };

@@ -88,7 +88,7 @@ void tsunamisquares::World::fillToSeaLevel(void) {
 // Partition the volume and momentum into the neighboring Squares.
 void tsunamisquares::World::moveSquares(const double dt) {
     std::map<UIndex, Square>::iterator sit;
-    bool debug = true;
+    bool debug = false;
     
     // Initialize the updated height and velocity to zero. These are the containers
     // used to keep track of the distributed height/velocity from moving squares.
@@ -143,16 +143,18 @@ void tsunamisquares::World::moveSquares(const double dt) {
                 std::map<UIndex, Square>::iterator neighbor_it = _squares.find(*nit);
                 double dx = fabs(new_pos[0] - squareCenter(neighbor_it->first)[0]);
                 double dy = fabs(new_pos[1] - squareCenter(neighbor_it->first)[1]);
-                double L = sit->second.length();
-                double this_fraction = (1-dx/L)*(1-dy/L);
+                double Lx = sit->second.Lx();
+                double Ly = sit->second.Ly();
+                double this_fraction = (1-dx/Lx)*(1-dy/Ly);
                 
                 if (debug) {
                     std::cout << "--neighbor " << *nit << std::endl;
-                    std::cout << "L: " << L << std::endl;
+                    std::cout << "Lx: " << Lx << std::endl;
+                    std::cout << "Ly: " << Ly << std::endl;
                     std::cout << "dx: " << dx << std::endl;
-                    std::cout << "dx/L: " << dx/L << std::endl;
+                    std::cout << "dx/Lx: " << dx/Lx << std::endl;
                     std::cout << "dy: " << dy << std::endl;
-                    std::cout << "dy/L: " << dy/L << std::endl;
+                    std::cout << "dy/Ly: " << dy/Ly << std::endl;
                 }
                 
                 //assertThrow(this_fraction < 1, "Area fraction must be less than 1.");
@@ -241,11 +243,12 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
     // Initialize the 4 points that will be used to approximate the slopes d/dx and d/dy
     // for this square. These are the centers of the neighbor squares.
     Vec<2> center = squareCenter(square_id);
-    double L = square_it->second.length();
-    center_left   = Vec<2>(center[0]-L, center[1]);
-    center_right  = Vec<2>(center[0]+L, center[1]);
-    center_top    = Vec<2>(center[0], center[1]+L);
-    center_bottom = Vec<2>(center[0], center[1]-L);
+    double Lx = square_it->second.Lx();
+    double Ly = square_it->second.Ly();
+    center_left   = Vec<2>(center[0]-Lx, center[1]);
+    center_right  = Vec<2>(center[0]+Lx, center[1]);
+    center_top    = Vec<2>(center[0], center[1]+Ly);
+    center_bottom = Vec<2>(center[0], center[1]-Ly);
     
     // Find the squareID for these locations
     UIndex leftID = whichSquare(center_left);
@@ -725,26 +728,27 @@ int tsunamisquares::World::read_bathymetry(const std::string &file_name) {
         new_square.set_vertex(i);
         // Assign the area from the distance to neighboring vertices.
         // Cases are for the edges of the model.
-        double A, B;
+        double Lx, Ly;
         int row = (int)(i/num_lons);
         int col = (int)(i%num_lons);
         if (col==num_lons-1 && row!=num_lats-1) {
             // right edge, not bottom row
-            A = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
-            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
+            Lx = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
+            Ly = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
         } else if (row==num_lats-1 && col!=num_lons-1) {
             // bottom row not right edge
-            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
-            B = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
+            Ly = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
+            Lx = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
         } else if (row==num_lats-1 && col==num_lons-1) {
             // bottom right corner
-            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
-            B = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
+            Ly = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
+            Lx = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
         } else {
-            A = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
-            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
+            Lx = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
+            Ly = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
         }
-        new_square.set_area(A*B);
+        new_square.set_Lx(Lx);
+        new_square.set_Ly(Ly);
 
 //        // TEMP FIX TO FORCE REGULAR GRID
 //        if (i==0) {
@@ -769,7 +773,7 @@ int tsunamisquares::World::write_file_kml(const std::string &file_name) {
     std::map<UIndex, Square>::const_iterator  sit;
     LatLonDepth                               min_bound, max_bound, center;
     Vec<3>                                    min_xyz, max_xyz;
-    double                                    dx, dy, range, L;
+    double                                    dx, dy, range, Lx, Ly;
     unsigned int                              i;
     double                                    depth = 100; //So the squares are off the surface a bit
 
@@ -818,15 +822,16 @@ int tsunamisquares::World::write_file_kml(const std::string &file_name) {
         centerLLD   = _vertices[sit->second.vertex()].lld();    
         centerXY    = squareCenter(sit->first);    
         Conversion  c(base);
-        L           = sit->second.length();
+        Lx          = sit->second.Lx();
+        Ly          = sit->second.Ly();
         // Locate the corners in XYZ, then convert to LLD
-        v3      = Vec<3>(centerXY[0]-L/2.0, centerXY[1]+L/2, 0.0); // top left
+        v3      = Vec<3>(centerXY[0]-Lx/2.0, centerXY[1]+Ly/2, 0.0); // top left
         lld[0]  = c.convert2LatLon(v3);
-        v3      = Vec<3>(centerXY[0]-L/2.0, centerXY[1]-L/2, 0.0); // bottom left
+        v3      = Vec<3>(centerXY[0]-Lx/2.0, centerXY[1]-Ly/2, 0.0); // bottom left
         lld[1]  = c.convert2LatLon(v3);
-        v3      = Vec<3>(centerXY[0]+L/2.0, centerXY[1]-L/2, 0.0); // bottom right
+        v3      = Vec<3>(centerXY[0]+Lx/2.0, centerXY[1]-Ly/2, 0.0); // bottom right
         lld[2]  = c.convert2LatLon(v3);
-        v3      = Vec<3>(centerXY[0]+L/2.0, centerXY[1]+L/2, 0.0); // top left
+        v3      = Vec<3>(centerXY[0]+Lx/2.0, centerXY[1]+Ly/2, 0.0); // top left
         lld[3]  = c.convert2LatLon(v3);
         
         // Output the KML format polygon for this section
