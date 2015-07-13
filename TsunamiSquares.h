@@ -22,8 +22,6 @@
 
 #define UNDEFINED_ELEMENT_ID    UINT_MAX
 
-//#include "hdf5.h"
-//#include "hdf5_hl.h"
 #include <string.h>
 #include <fstream>
 #include <map>
@@ -61,7 +59,6 @@ namespace tsunamisquares {
     struct VertexData {
         UIndex  _id;
         double   _lat, _lon, _alt;
-        //unsigned int _is_boundary;
     };
 
     class Vertex : public ModelIO {
@@ -74,7 +71,6 @@ namespace tsunamisquares {
                 _data._id = INVALID_INDEX;
                 _data._lat = _data._lon = _data._alt = std::numeric_limits<double>::quiet_NaN();
                 _pos = Vec<3>();
-                //_data._is_boundary = 0;
             };
             
             void clear(void);
@@ -94,13 +90,14 @@ namespace tsunamisquares {
                 return LatLonDepth(_data._lat, _data._lon, _data._alt);
             };
             void set_lld(const LatLonDepth &lld, const LatLonDepth &base) {
-                // TEMPORARY FIX TO LET (X,Y,Z) = (LON,LAT,ALT)
-                //Conversion c(base);
-                //Vec<3> xyz = c.convert2xyz(lld);
+                Conversion c(base);
+                Vec<3> xyz = c.convert2xyz(lld);
                 _data._lat = lld.lat();
                 _data._lon = lld.lon();
                 _data._alt = lld.altitude();
-                _pos = Vec<3>(lld.lon(), lld.lat(), lld.altitude());
+                _pos = xyz;
+                // TEMPORARY FIX TO LET (X,Y,Z) = (LON,LAT,ALT)
+                //_pos = Vec<3>(lld.lon(), lld.lat(), lld.altitude());
             };
 
             Vec<3> xyz(void) const {
@@ -128,7 +125,6 @@ namespace tsunamisquares {
     // Squares, the functional members of Tsunami Square
     struct SquareData {
         UIndex              _id;
-        //unsigned int        _is_boundary;
         // _vertex for the vertex_id for this square
         UIndex              _vertex;
         Vec<2>              _velocity;
@@ -152,8 +148,6 @@ namespace tsunamisquares {
 
                 _data._vertex = INVALID_INDEX;
                 _data._velocity = _data._accel = _data._updated_momentum = Vec<2>(0.0,0.0);
-
-                //_data._is_boundary = false;
                 _data._height = _data._updated_height = _data._area  = std::numeric_limits<double>::quiet_NaN();
                 _data._density = 1025.0; // sea water by default
                 _data._friction = 0.02;
@@ -319,10 +313,12 @@ namespace tsunamisquares {
             double squareMass(const UIndex &square_id) const;
             double squareVolume(const UIndex &square_id) const;
             Vec<2> squareMomentum(const UIndex &square_id) const;
-            void write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const;
             // ======= Initial condition setup functions ======
             void setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo);
             void setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel);
             void setSquareHeight(const UIndex &square_id, const double &new_height);
+            // ======= File I/O ====================
+            int write_file_kml(const std::string &file_name);
+            void write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const;
     };
 }

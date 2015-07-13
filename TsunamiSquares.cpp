@@ -88,7 +88,7 @@ void tsunamisquares::World::fillToSeaLevel(void) {
 // Partition the volume and momentum into the neighboring Squares.
 void tsunamisquares::World::moveSquares(const double dt) {
     std::map<UIndex, Square>::iterator sit;
-    bool debug = false;
+    bool debug = true;
     
     // Initialize the updated height and velocity to zero. These are the containers
     // used to keep track of the distributed height/velocity from moving squares.
@@ -145,6 +145,16 @@ void tsunamisquares::World::moveSquares(const double dt) {
                 double dy = fabs(new_pos[1] - squareCenter(neighbor_it->first)[1]);
                 double L = sit->second.length();
                 double this_fraction = (1-dx/L)*(1-dy/L);
+                
+                if (debug) {
+                    std::cout << "--neighbor " << *nit << std::endl;
+                    std::cout << "L: " << L << std::endl;
+                    std::cout << "dx: " << dx << std::endl;
+                    std::cout << "dx/L: " << dx/L << std::endl;
+                    std::cout << "dy: " << dy << std::endl;
+                    std::cout << "dy/L: " << dy/L << std::endl;
+                }
+                
                 //assertThrow(this_fraction < 1, "Area fraction must be less than 1.");
                 if (this_fraction > 0) {
                     fraction_sum += this_fraction;
@@ -715,35 +725,35 @@ int tsunamisquares::World::read_bathymetry(const std::string &file_name) {
         new_square.set_vertex(i);
         // Assign the area from the distance to neighboring vertices.
         // Cases are for the edges of the model.
-//        double A, B;
-//        int row = (int)(i/num_lons);
-//        int col = (int)(i%num_lons);
-//        if (col==num_lons-1 && row!=num_lats-1) {
-//            // right edge, not bottom row
-//            A = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
-//            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
-//        } else if (row==num_lats-1 && col!=num_lons-1) {
-//            // bottom row not right edge
-//            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
-//            B = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
-//        } else if (row==num_lats-1 && col==num_lons-1) {
-//            // bottom right corner
-//            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
-//            B = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
-//        } else {
-//            A = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
-//            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
-//        }
-//        new_square.set_area(A*B);
-
-        // TEMP FIX TO FORCE REGULAR GRID
-        if (i==0) {
-            double A = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
-            double B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
-            new_square.set_area(A*B);
+        double A, B;
+        int row = (int)(i/num_lons);
+        int col = (int)(i%num_lons);
+        if (col==num_lons-1 && row!=num_lats-1) {
+            // right edge, not bottom row
+            A = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
+            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
+        } else if (row==num_lats-1 && col!=num_lons-1) {
+            // bottom row not right edge
+            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
+            B = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
+        } else if (row==num_lats-1 && col==num_lons-1) {
+            // bottom right corner
+            A = (_vertices[i].xy() - _vertices[i-num_lons].xy()).mag();
+            B = (_vertices[i].xy() - _vertices[i-1].xy()).mag();
         } else {
-            new_square.set_area(_squares[0].area());
+            A = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
+            B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
         }
+        new_square.set_area(A*B);
+
+//        // TEMP FIX TO FORCE REGULAR GRID
+//        if (i==0) {
+//            double A = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
+//            double B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
+//            new_square.set_area(A*B);
+//        } else {
+//            new_square.set_area(_squares[0].area());
+//        }
 
         
         _squares.insert(std::make_pair(new_square.id(), new_square));
@@ -752,4 +762,106 @@ int tsunamisquares::World::read_bathymetry(const std::string &file_name) {
 
     return 0;
 }
+
+
+int tsunamisquares::World::write_file_kml(const std::string &file_name) {
+    std::ofstream                             out_file;
+    std::map<UIndex, Square>::const_iterator  sit;
+    LatLonDepth                               min_bound, max_bound, center;
+    Vec<3>                                    min_xyz, max_xyz;
+    double                                    dx, dy, range, L;
+    unsigned int                              i;
+    double                                    depth = 100; //So the squares are off the surface a bit
+
+    out_file.open(file_name.c_str());
+
+    get_bounds(min_bound, max_bound);
+    center = LatLonDepth(max_bound.lat() - (max_bound.lat()-min_bound.lat())/2,
+                         max_bound.lon() - (max_bound.lon()-min_bound.lon())/2);
+    Conversion c(center);
+    min_xyz = c.convert2xyz(min_bound);
+    max_xyz = c.convert2xyz(max_bound);
+    dx = max_xyz[0]-min_xyz[0];
+    dy = max_xyz[1]-min_xyz[1];
+    range = fmax(dx, dy) * (1.0/tan(c.deg2rad(30)));
+
+    out_file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    out_file << "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n";
+    out_file << "<Document>\n";
+    out_file << "<LookAt>\n";
+    out_file << "\t<latitude>" << center.lat() << "</latitude>\n";
+    out_file << "\t<longitude>" << center.lon() << "</longitude>\n";
+    out_file << "\t<altitude>0</altitude>\n";
+    out_file << "\t<range>" << range << "</range>\n";
+    out_file << "\t<tilt>0</tilt>\n";
+    out_file << "\t<heading>0</heading>\n";
+    out_file << "\t<altitudeMode>absolute</altitudeMode>\n";
+    out_file << "</LookAt>\n";
+    out_file << "<Style id=\"sectionLabel\">\n";
+    out_file << "\t<IconStyle>\n";
+    out_file << "\t\t<Icon>\n";
+    out_file << "\t\t\t<href>http://maps.google.com/mapfiles/kml/paddle/wht-blank.png</href>\n";
+    out_file << "\t\t</Icon>\n";
+    out_file << "\t</IconStyle>\n";
+    out_file << "</Style>\n";
+
+    out_file << "<Folder id=\"squares\">\n";
+
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        // Compute the lat/lon/depth of the 4 corners of the square
+        LatLonDepth         lld[4];
+        Vec<2>              v2, centerXY;
+        Vec<3>              v3;
+        LatLonDepth         centerLLD, base;
+
+        base        = getBase();
+        centerLLD   = _vertices[sit->second.vertex()].lld();    
+        centerXY    = squareCenter(sit->first);    
+        Conversion  c(base);
+        L           = sit->second.length();
+        // Locate the corners in XYZ, then convert to LLD
+        v3      = Vec<3>(centerXY[0]-L/2.0, centerXY[1]+L/2, 0.0); // top left
+        lld[0]  = c.convert2LatLon(v3);
+        v3      = Vec<3>(centerXY[0]-L/2.0, centerXY[1]-L/2, 0.0); // bottom left
+        lld[1]  = c.convert2LatLon(v3);
+        v3      = Vec<3>(centerXY[0]+L/2.0, centerXY[1]-L/2, 0.0); // bottom right
+        lld[2]  = c.convert2LatLon(v3);
+        v3      = Vec<3>(centerXY[0]+L/2.0, centerXY[1]+L/2, 0.0); // top left
+        lld[3]  = c.convert2LatLon(v3);
+        
+        // Output the KML format polygon for this section
+        out_file << "\t\t<Placemark>\n";
+        out_file << "\t\t<description>\n";
+        out_file << "Square: " << sit->first << "\n";
+        out_file << "LLD: " << squareLatLon(sit->first)[0] << "," << squareLatLon(sit->first)[1] << "," << squareDepth(sit->first) << " [m]\n";
+        out_file << "XYZ: " << squareCenter(sit->first)[0] << "," << squareCenter(sit->first)[1] << ","   << squareDepth(sit->first) << " [m]\n";
+        out_file << "Area: " << sit->second.area()*pow(10,-6) << "[km^2]\n";
+        out_file << "Density: " << sit->second.density() << "[kg/m^3]\n";
+        out_file << "\t\t</description>\n";
+        out_file << "\t\t\t<styleUrl>#baseStyle</styleUrl>\n";
+        out_file << "\t\t\t<Polygon>\n";
+        out_file << "\t\t\t\t<extrude>0</extrude>\n";
+        out_file << "\t\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n";
+        out_file << "\t\t\t\t<outerBoundaryIs>\n";
+        out_file << "\t\t\t\t\t<LinearRing>\n";
+        out_file << "\t\t\t\t\t\t<coordinates>\n";
+
+        for (unsigned int i=0; i<4; ++i) out_file << "\t\t\t\t\t\t\t" << lld[i].lon() << "," << lld[i].lat() << "," << depth << "\n";
+
+        out_file << "\t\t\t\t\t\t</coordinates>\n";
+        out_file << "\t\t\t\t\t</LinearRing>\n";
+        out_file << "\t\t\t\t</outerBoundaryIs>\n";
+        out_file << "\t\t\t</Polygon>\n";
+        out_file << "\t\t</Placemark>\n";
+    }
+
+    out_file << "</Folder>\n";
+    out_file << "</Document>\n";
+    out_file << "</kml>\n";
+
+    out_file.close();
+
+    return 0;
+}
+
 
