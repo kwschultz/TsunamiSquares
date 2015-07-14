@@ -298,7 +298,7 @@ namespace tsunamisquares {
             SquareIDSet getSquareIDs(void) const;
             SquareIDSet getVertexIDs(void) const;
 
-            SquareIDSet getNearestIDs(const Vec<2> &location) const;
+            std::map<double, UIndex> getNearest(const Vec<2> &location) const;
             SquareIDSet getNeighborIDs(const UIndex &square_id) const;
             
             // ======= Main functions =========

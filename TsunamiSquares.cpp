@@ -104,8 +104,8 @@ void tsunamisquares::World::moveSquares(const double dt) {
     // Now go through each square and move the water, distribute to neighbors
     for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
         Vec<2> current_velo, current_accel, current_pos, new_pos, new_velo;
-        SquareIDSet neighbors;
-        SquareIDSet::const_iterator nit;
+        std::map<double, tsunamisquares::UIndex> neighbors;
+        std::map<double, tsunamisquares::UIndex>::const_iterator nit;
         
         current_pos = squareCenter(sit->first);
         current_velo = sit->second.velocity();
@@ -127,59 +127,53 @@ void tsunamisquares::World::moveSquares(const double dt) {
                 std::cout << "new velo: " << new_velo << std::endl;
             }
         
-            // Find the 4 nearest squares to the new position
-            neighbors = getNearestIDs(new_pos);
+            // Find the nearest squares and their distances to the new position
+            neighbors = getNearest(new_pos);
             
             // Init these for renormalizing the fractions
             double fraction_sum = 0.0;
-            std::map<UIndex, double> originalFractions;
-            std::map<UIndex, double> renormFractions;
+            std::map<UIndex, double> originalFractions, renormFractions;
             std::map<UIndex, double>::iterator frac_it;
-            SquareIDSet to_erase;
+            std::vector<double> to_erase; // To store the keys of the neighbors map elements to delete
+            std::vector<double>::iterator eit;
             
             // Iterate through neighbors once to compute the fractional area overlap.
             for (nit=neighbors.begin(); nit!=neighbors.end(); ++nit) {
                 // This iterator will give us the neighbor square 
-                std::map<UIndex, Square>::iterator neighbor_it = _squares.find(*nit);
+                std::map<UIndex, Square>::iterator neighbor_it = _squares.find(nit->second);
                 double dx = fabs(new_pos[0] - squareCenter(neighbor_it->first)[0]);
                 double dy = fabs(new_pos[1] - squareCenter(neighbor_it->first)[1]);
                 double Lx = sit->second.Lx();
                 double Ly = sit->second.Ly();
                 double this_fraction = (1-dx/Lx)*(1-dy/Ly);
                 
-                if (debug) {
-                    std::cout << "--neighbor " << *nit << std::endl;
-                    std::cout << "Lx: " << Lx << std::endl;
-                    std::cout << "Ly: " << Ly << std::endl;
-                    std::cout << "dx: " << dx << std::endl;
-                    std::cout << "dx/Lx: " << dx/Lx << std::endl;
-                    std::cout << "dy: " << dy << std::endl;
-                    std::cout << "dy/Ly: " << dy/Ly << std::endl;
-                }
-                
-                //assertThrow(this_fraction < 1, "Area fraction must be less than 1.");
-                if (this_fraction > 0) {
+                // Add neighbors until we get 4 that have fraction > 0 
+                if (this_fraction > 0 && originalFractions.size() < 4) {
                     fraction_sum += this_fraction;
-                    originalFractions.insert(std::make_pair(*nit, this_fraction));
+                    originalFractions.insert(std::make_pair(nit->second, this_fraction));
+                    if (debug) {
+                        std::cout << "--neighbor " << nit->second << std::endl;
+                        std::cout << "dx/Lx: " << dx/Lx << std::endl;
+                        std::cout << "dy/Ly: " << dy/Ly << std::endl;
+                        std::cout << "fraction: " << this_fraction << std::endl;
+                    }
                 } else {
                     // if the fraction is less than 0, then it is not a valid neighbor
-                    to_erase.insert(*nit);
+                    to_erase.push_back(nit->first);
                 }
             }
             
             // Remove invalid neighbors from the neighbors set
-            for (nit=to_erase.begin(); nit!=to_erase.end(); ++nit) {
-                neighbors.erase(*nit);
+            for (eit=to_erase.begin(); eit!=to_erase.end(); ++eit) {
+                std::cout << "--> ERASING NEIGHBOR " << neighbors.find(*eit)->second << std::endl << std::flush;
+                neighbors.erase(*eit);
             }
             
-            //std::cout << "summed (over " << originalFractions.size() << ") Volume fraction: " << fraction_sum << std::endl;
+            if (debug) std::cout << "summed (over " << originalFractions.size() << ") Volume fraction: " << fraction_sum << std::endl;
             
             // Then normalize these fractions to enforce conservation.
             for (frac_it=originalFractions.begin(); frac_it!=originalFractions.end(); ++frac_it) {
-//                std::cout << "---Neighbor : " << frac_it->first << std::endl;
-//                std::cout << "original fraction : " << frac_it->second << std::endl; 
-//                std::cout << "renormed fraction : " << (frac_it->second)/fraction_sum << std::endl; 
-                //assertThrow((frac_it->second)/fraction_sum < 1, "Area fraction must be less than 1.");
+                assertThrow((frac_it->second)/fraction_sum <= 1, "Area fraction must be less than 1.");
                 renormFractions.insert(std::make_pair(frac_it->first, (frac_it->second)/fraction_sum));
             }
             
@@ -188,16 +182,18 @@ void tsunamisquares::World::moveSquares(const double dt) {
             for (frac_it=renormFractions.begin(); frac_it!=renormFractions.end(); ++frac_it) {
                 renormSum += frac_it->second;
             }
-//            std::cout.precision(17);
-//            std::cout << "renormed sum Volume fraction: " << std::fixed << renormSum << std::endl;
-//            assertThrow(renormSum == 1.0, "Renormed sum does not equal 1.0");
+            
+            if (debug) {
+                std::cout.precision(17);
+                std::cout << "1st Renorm: summed fraction: " << std::fixed << renormSum << std::endl;
+            }
             
             // Compute height and momentum imparted to neighbors
             for (nit=neighbors.begin(); nit!=neighbors.end(); ++nit) {
                 // This iterator will give us the neighbor square 
-                std::map<UIndex, Square>::iterator neighbor_it = _squares.find(*nit);
+                std::map<UIndex, Square>::iterator neighbor_it = _squares.find(nit->second);
                 // This iterates through the renormalized fractions
-                frac_it = renormFractions.find(*nit);
+                frac_it = renormFractions.find(nit->second);
                 double areaFraction = frac_it->second;
                 
                 // Update the amount of water in the neighboring square (conserve volume)
@@ -211,12 +207,12 @@ void tsunamisquares::World::moveSquares(const double dt) {
                 Vec<2> M  = neighbor_it->second.updated_momentum();
                 neighbor_it->second.set_updated_momentum(M+dM);
                 
-                if (debug) {
-                    std::cout << "--- Neighbor : " << neighbor_it->second.id() << std::endl;
-                    std::cout << "dV: " << dV << std::endl;
-                    std::cout << "dM: " << dM << std::endl;
-                    std::cout << "Area fraction: " << areaFraction << std::endl;
-                }
+//                if (debug) {
+//                    std::cout << "--- Neighbor : " << neighbor_it->second.id() << std::endl;
+//                    std::cout << "dV: " << dV << std::endl;
+//                    std::cout << "dM: " << dM << std::endl;
+//                    std::cout << "Area fraction: " << areaFraction << std::endl;
+//                }
             }
             
         } else {
@@ -237,7 +233,7 @@ void tsunamisquares::World::moveSquares(const double dt) {
 
 tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_id) const {
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
-    Vec<2> gradient, center_left, center_right, center_top, center_bottom;
+    Vec<2> gradient;
     bool debug = false;
     
     // Initialize the 4 points that will be used to approximate the slopes d/dx and d/dy
@@ -245,31 +241,30 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
     Vec<2> center = squareCenter(square_id);
     double Lx = square_it->second.Lx();
     double Ly = square_it->second.Ly();
-    center_left   = Vec<2>(center[0]-Lx, center[1]);
-    center_right  = Vec<2>(center[0]+Lx, center[1]);
-    center_top    = Vec<2>(center[0], center[1]+Ly);
-    center_bottom = Vec<2>(center[0], center[1]-Ly);
     
     // Find the squareID for these locations
-    UIndex leftID = whichSquare(center_left);
-    UIndex rightID = whichSquare(center_right);
-    UIndex topID = whichSquare(center_top);
-    UIndex bottomID = whichSquare(center_bottom);
+    UIndex leftID   = whichSquare( Vec<2>(center[0]-Lx, center[1])    );
+    UIndex rightID  = whichSquare( Vec<2>(center[0]+Lx, center[1])    );
+    UIndex topID    = whichSquare( Vec<2>(center[0]   , center[1]+Ly) ); 
+    UIndex bottomID = whichSquare( Vec<2>(center[0]   , center[1]-Ly) );
     
     // TODO: Better boundary conditions. For now, just set no acceleration along boundary
     if (leftID == square_id || rightID == square_id || topID == square_id || bottomID == square_id) {
         gradient = Vec<2>(0.0,0.0);
     } else {
-        double z_left = squareLevel(leftID);
-        double z_right = squareLevel(rightID);
-        double z_top = squareLevel(topID);
+        // Water level of neighbor squares
+        double z_left   = squareLevel(leftID);
+        double z_right  = squareLevel(rightID);
+        double z_top    = squareLevel(topID);
         double z_bottom = squareLevel(bottomID);
 
+        // X,Y of neighbor squares
         Vec<2> center_L = squareCenter(leftID);
         Vec<2> center_R = squareCenter(rightID);
         Vec<2> center_T = squareCenter(topID);
         Vec<2> center_B = squareCenter(bottomID);
         
+        // gradient = (dz/dx, dz/dy)
         gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
         gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
         
@@ -330,11 +325,11 @@ void tsunamisquares::World::flattenBottom(const double &depth) {
 //// -------------------- Utility Functions -------------------------------
 //// ----------------------------------------------------------------------
 // Get the square_id for each of the 4 closest squares to some location = (x,y)
-tsunamisquares::SquareIDSet tsunamisquares::World::getNearestIDs(const Vec<2> &location) const {
+std::map<double, tsunamisquares::UIndex> tsunamisquares::World::getNearest(const Vec<2> &location) const {
     std::map<double, UIndex>                  square_dists;
     std::map<double, UIndex>::const_iterator  it;
     std::map<UIndex, Square>::const_iterator  sit;
-    SquareIDSet                               neighbors;
+    std::map<double, UIndex>                  neighbors;
 
     // Compute distance from "location" to the center of each square.
     // Since we use a map, the distances will be ordered since they are the keys
@@ -343,10 +338,11 @@ tsunamisquares::SquareIDSet tsunamisquares::World::getNearestIDs(const Vec<2> &l
         square_dists.insert(std::make_pair(square_dist, sit->second.id()));
     }
     
-    // Grab the closest 4 squares and return their IDs
+    // Iterate again thru the distance-sorted map, grab the closest squares
     for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
-        neighbors.insert(it->second);
-        if (neighbors.size() == 4) break;
+        std::cout << "id: " << it->second << "  dist: " << it->first << std::endl;
+        neighbors.insert(std::make_pair(it->first, it->second));
+        if (neighbors.size() == 8) break;
     }
     
     return neighbors;
