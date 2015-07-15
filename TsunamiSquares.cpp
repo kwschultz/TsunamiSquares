@@ -54,7 +54,7 @@ void tsunamisquares::World::diffuseSquares(const double dt) {
     std::map<UIndex, Square>::iterator  nit;
     double                              volume_change, new_level, add_height, height_change;
     SquareIDSet::iterator               id_it;
-    bool debug = true;
+    bool debug = false;
 
     // Initialize updated_heights, will use this to store the net height changes
     for (it=_squares.begin(); it!=_squares.end(); ++it) {
@@ -63,11 +63,11 @@ void tsunamisquares::World::diffuseSquares(const double dt) {
 
     // Compute the height changes due to diffusion of water to neighbors
     for (it=_squares.begin(); it!=_squares.end(); ++it) {
-        if (it->second.height() > 0 ) {
+        if (it->second.height() > 0 && squareLevel(it->first) != 0.0) {
             // Compute the new height after diffusing the water by 1 time step
             new_level = squareLevel(it->first)/(1 + D()*dt/it->second.area());
             volume_change = (it->second.area())*(squareLevel(it->first) - new_level);
-            assertThrow(volume_change >= 0, "Volume change should be positive");
+            //assertThrow(volume_change >= 0, "Volume change should be positive");
             height_change = new_level - squareLevel(it->first);
             
             if (debug) {

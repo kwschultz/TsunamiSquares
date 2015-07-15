@@ -27,14 +27,14 @@ int main (int argc, char **argv) {
     tsunamisquares::SquareIDSet::const_iterator it;
     tsunamisquares::SquareIDSet                 ids;
     std::ofstream                               out_file;
-    const std::string       file_name = "diffusing_only_LxLy_900_dt10.txt";
+    const std::string       file_name = "accel_bump_900_dt10_diffusion.txt";
     // Diffusion constant (fit to a reasonable looking sim)
     double D = 140616.45;
     
     this_world.clear();
     //this_world.read_file_ascii("test_file.txt");
-    std::cout << "Reading...  Pacific_36.txt" << std::endl;
-    this_world.read_bathymetry("Pacific_36.txt");
+    std::cout << "Reading...  Pacific_900.txt" << std::endl;
+    this_world.read_bathymetry("Pacific_900.txt");
     this_world.info();
 
     ids = this_world.getSquareIDs();
@@ -55,10 +55,10 @@ int main (int argc, char **argv) {
     tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
 //    // TODO: Save num_lons and num_lats in the world object
     std::cout << "Deforming the bottom... " << std::endl;
-    this_world.deformBottom(bot_left,1.0);
-    this_world.deformBottom(top_left,1.0);
-    this_world.deformBottom(top_right,1.0);
-    this_world.deformBottom(bot_right,1.0);
+    this_world.deformBottom(bot_left,100.0);
+    this_world.deformBottom(top_left,100.0);
+    this_world.deformBottom(top_right,100.0);
+    this_world.deformBottom(bot_right,100.0);
 //    this_world.setSquareHeight(0,1001.0);
 //    double Lx = this_world.square(0).Lx();
 //    double Ly = this_world.square(0).Ly();
@@ -95,7 +95,7 @@ int main (int argc, char **argv) {
             }
         }
         // Move the squares
-        //this_world.moveSquares(dt);
+        this_world.moveSquares(dt);
         this_world.diffuseSquares(dt);
         time += dt;
         current_step += 1;
