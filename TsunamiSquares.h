@@ -257,6 +257,8 @@ namespace tsunamisquares {
             std::map<UIndex, Square>  _squares;
             LatLonDepth _base;
             double _min_lat, _max_lat, _min_lon, _max_lon;
+            // Diffusion constant
+            static const double _D = 140616.45;
             
         public:
             Square &new_square(void);
@@ -286,6 +288,22 @@ namespace tsunamisquares {
                 return _base;
             }
             
+            double D(void) const {
+                return _D;
+            }
+            double min_lat(void) const {
+                return _min_lat;
+            }
+            double max_lat(void) const {
+                return _max_lat;
+            }
+            double min_lon(void) const {
+                return _min_lon;
+            }
+            double max_lon(void) const {
+                return _max_lon;
+            }
+            
             void printSquare(const UIndex square_id);
             void printVertex(const UIndex vertex_id);
             void info(void) const;
@@ -304,7 +322,7 @@ namespace tsunamisquares {
             // ======= Main functions =========
             void fillToSeaLevel(void);
             void moveSquares(const double dt);
-            void smoothSquares(void);
+            void diffuseSquares(const double dt);
             Vec<2> getGradient(const UIndex &square_id) const;
             void updateAcceleration(const UIndex &square_id);
             void deformBottom(const UIndex &square_id, const double &height_change);

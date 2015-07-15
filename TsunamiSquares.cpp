@@ -46,42 +46,74 @@ void tsunamisquares::World::fillToSeaLevel(void) {
 }
 
 
-// Smoothing: Set the volume in each square to the average volume of the neighbors
-//void tsunamisquares::World::smoothSquares(void) {
-//    std::map<UIndex, Square>::iterator  it;
-//    SquareIDSet                         neighborIDs;
-//    std::map<UIndex, Square>::iterator  nit;
-//    double                              neighbor_volume_avg = 0.0;
-//    SquareIDSet::iterator               id_it;
-//
-//    
-//    for (it=_squares.begin(); it!=_squares.end(); ++it) {
-//        neighborIDs = getNeighborIDs(it->first);
-//        std::cout << "------- square " << it->second.id() << std::endl;
-//        std::cout << "neighbors ";
-//        for (id_it=neighborIDs.begin(); id_it!=neighborIDs.end(); ++id_it) {
-//            nit = _squares.find(*id_it);
-//            neighbor_volume_avg += (nit->second.volume())/4.0;
-//            std::cout << *id_it << ", ";
-//        }
-//        std::cout << std::endl;
-//        // With fixed area for each square, only ever change the height
-//        std::cout << "pre-smoothing volume: " << it->second.volume() << std::endl;
-//        std::cout << "smoothed volume: " << neighbor_volume_avg << std::endl;
-//        std::cout << "area: " << it->second.area() << std::endl;
-//        std::cout << "pre-smoothing height: " << it->second.height() << std::endl;
-//        std::cout << "smoothed height: " << neighbor_volume_avg/it->second.area() << std::endl;
-//        // Store the result from this averaging, do not change actual height until
-//        // we've computed the updated_height for every square.
-//        it->second.set_updated_height(neighbor_volume_avg/it->second.area());
-//    }
-//    
-//    // Loop again over squares to set new smoothed height
-//    for (it=_squares.begin(); it!=_squares.end(); ++it) {
-//        it->second.set_height(it->second.updated_height());
-//    }
-//    
-//}
+// Diffusion: Remove a volume of water from each square and distribute it to the neighbors.
+// Model: area_change = diff_const*time_step
+void tsunamisquares::World::diffuseSquares(const double dt) {
+    std::map<UIndex, Square>::iterator  it;
+    SquareIDSet                         neighborIDs;
+    std::map<UIndex, Square>::iterator  nit;
+    double                              volume_change, new_height, add_height, height_change;
+    SquareIDSet::iterator               id_it;
+    bool debug = true;
+
+    // Initialize updated_heights, will use this to store the net height changes
+    for (it=_squares.begin(); it!=_squares.end(); ++it) {
+        it->second.set_updated_height( it->second.height() );
+    }
+
+    // Compute the height changes due to diffusion of water to neighbors
+    for (it=_squares.begin(); it!=_squares.end(); ++it) {
+        if (it->second.height() > 0) {
+            // Compute the new height after diffusing the water by 1 time step
+            new_height = it->second.height()/(1 + D()*dt/it->second.area());
+            volume_change = (it->second.area())*(it->second.height() - new_height);
+            assertThrow(volume_change > 0, "Volume change should be positive");
+            height_change = new_height - it->second.height();
+            
+            if (debug) {
+                std::cout << "----> Diffusing Square " << it->second.id() << std::endl;
+                std::cout << "volume change: " << volume_change << std::endl;
+                std::cout << "old height: " << it->second.height() << std::endl;
+                std::cout << "new height: " << new_height << std::endl;
+                std::cout << "-> neighbors " << std::endl;
+            }
+            
+            // For continuity, must self-add 1/4 of the volume change to edges and 1/2 to corners
+            int minLat = squareLatLon(it->first)[0] == min_lat();
+            int maxLat = squareLatLon(it->first)[0] == max_lat();
+            int minLon = squareLatLon(it->first)[1] == min_lon();
+            int maxLon = squareLatLon(it->first)[1] == max_lon();
+            int cornerSum = minLat + minLon + maxLon + maxLat;    
+            if (cornerSum == 1) {
+                height_change += volume_change/( it->second.area()*4.0);
+            } else if (cornerSum == 2) {
+                height_change += volume_change/( it->second.area()*2.0);
+            }
+            
+            // Add the height change to the updated height
+            it->second.set_updated_height(it->second.updated_height() + height_change);
+        
+            neighborIDs = getNeighborIDs(it->first);
+            
+            for (id_it=neighborIDs.begin(); id_it!=neighborIDs.end(); ++id_it) {
+                nit = _squares.find(*id_it);
+                // Divide up the diffused volume equally amongst neighbors
+                add_height = volume_change/( nit->second.area()*4.0);
+                if (debug) {
+                    std::cout << " " << *id_it << std::endl;
+                    std::cout << "old height: " << nit->second.height() << std::endl;
+                    std::cout << "new height: " << add_height + nit->second.height() << std::endl;
+                }
+                nit->second.set_updated_height( nit->second.updated_height() + add_height);
+            }
+        }
+    }
+    
+    // Reset the heights based on the changes
+    for (it=_squares.begin(); it!=_squares.end(); ++it) {
+        it->second.set_height( it->second.updated_height() );
+    }
+}
 
 
 // Move the water from a Square given its current velocity and acceleration.
@@ -165,7 +197,7 @@ void tsunamisquares::World::moveSquares(const double dt) {
             
             // Remove invalid neighbors from the neighbors set
             for (eit=to_erase.begin(); eit!=to_erase.end(); ++eit) {
-                std::cout << "--> ERASING NEIGHBOR " << neighbors.find(*eit)->second << std::endl << std::flush;
+                if (debug) std::cout << "--> ERASING NEIGHBOR " << neighbors.find(*eit)->second << std::endl << std::flush;
                 neighbors.erase(*eit);
             }
             
@@ -249,7 +281,7 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
     UIndex bottomID = whichSquare( Vec<2>(center[0]   , center[1]-Ly) );
     
     // TODO: Better boundary conditions. For now, just set no acceleration along boundary
-    if (leftID == square_id || rightID == square_id || topID == square_id || bottomID == square_id) {
+    if (squareLatLon(square_it->first)[0] == min_lat() || squareLatLon(square_it->first)[0] == max_lat() || squareLatLon(square_it->first)[1] == min_lon() || squareLatLon(square_it->first)[1] == max_lon() ) {
         gradient = Vec<2>(0.0,0.0);
     } else {
         // Water level of neighbor squares
@@ -307,6 +339,7 @@ void tsunamisquares::World::deformBottom(const UIndex &square_id, const double &
     vit->second.set_lld(new_lld, getBase());
 }
 
+
 // Flatten the bottom to be the specified depth
 void tsunamisquares::World::flattenBottom(const double &depth) {
     std::map<UIndex, Vertex>::iterator vit;
@@ -340,7 +373,6 @@ std::map<double, tsunamisquares::UIndex> tsunamisquares::World::getNearest(const
     
     // Iterate again thru the distance-sorted map, grab the closest squares
     for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
-        std::cout << "id: " << it->second << "  dist: " << it->first << std::endl;
         neighbors.insert(std::make_pair(it->first, it->second));
         if (neighbors.size() == 8) break;
     }
@@ -372,6 +404,7 @@ tsunamisquares::SquareIDSet tsunamisquares::World::getNeighborIDs(const UIndex &
     std::map<UIndex, Square>::const_iterator  sit;
     SquareIDSet                               neighbors;
     std::map<UIndex, Square>::const_iterator  this_sit = _squares.find(square_id);
+    unsigned int                              num_neighbors = 4;
 
     // Compute distance from center of the input square to the center of each other square.
     // Since we use a map, the distances will be ordered since they are the keys
@@ -383,10 +416,23 @@ tsunamisquares::SquareIDSet tsunamisquares::World::getNeighborIDs(const UIndex &
         }
     }
     
+    // If the square is along the edge, only return 3 neighbors.
+    // If the square is in a corner, return 2 neighbors.
+    int minLat = squareLatLon(this_sit->first)[0] == min_lat();
+    int maxLat = squareLatLon(this_sit->first)[0] == max_lat();
+    int minLon = squareLatLon(this_sit->first)[1] == min_lon();
+    int maxLon = squareLatLon(this_sit->first)[1] == max_lon();
+    int cornerSum = minLat + minLon + maxLon + maxLat;    
+    if (cornerSum == 1) {
+        num_neighbors = 3;
+    } else if (cornerSum == 2) {
+        num_neighbors = 2;
+    }
+    
     // Grab the closest 4 squares and return their IDs
     for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
         neighbors.insert(it->second);
-        if (neighbors.size() == 4) break;
+        if (neighbors.size() == num_neighbors) break;
     }
     
     return neighbors;
@@ -743,19 +789,9 @@ int tsunamisquares::World::read_bathymetry(const std::string &file_name) {
             Lx = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
             Ly = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
         }
+        
         new_square.set_Lx(Lx);
         new_square.set_Ly(Ly);
-
-//        // TEMP FIX TO FORCE REGULAR GRID
-//        if (i==0) {
-//            double A = (_vertices[i].xy() - _vertices[i+1].xy()).mag();
-//            double B = (_vertices[i].xy() - _vertices[i+num_lons].xy()).mag();
-//            new_square.set_area(A*B);
-//        } else {
-//            new_square.set_area(_squares[0].area());
-//        }
-
-        
         _squares.insert(std::make_pair(new_square.id(), new_square));
     }
     
