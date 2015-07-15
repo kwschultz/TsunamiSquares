@@ -27,12 +27,14 @@ int main (int argc, char **argv) {
     tsunamisquares::SquareIDSet::const_iterator it;
     tsunamisquares::SquareIDSet                 ids;
     std::ofstream                               out_file;
-    const std::string                           file_name = "accel_middle_bump_renormFractions_LLDasXYZ_initialV.txt";
+    const std::string       file_name = "diffusing_only_LxLy_900_dt10.txt";
+    // Diffusion constant (fit to a reasonable looking sim)
+    double D = 140616.45;
     
     this_world.clear();
     //this_world.read_file_ascii("test_file.txt");
-    std::cout << "Reading...  Pacific_9.txt" << std::endl;
-    this_world.read_bathymetry("Pacific_9.txt");
+    std::cout << "Reading...  Pacific_36.txt" << std::endl;
+    this_world.read_bathymetry("Pacific_36.txt");
     this_world.info();
 
     ids = this_world.getSquareIDs();
@@ -46,58 +48,60 @@ int main (int argc, char **argv) {
     std::cout << "Filling with water...";
     this_world.fillToSeaLevel();
     
-//    // Initial conditions
+    // Initial conditions
     tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
-//    tsunamisquares::UIndex bot_left  = bot_right-1;
-//    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
-//    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
+    tsunamisquares::UIndex bot_left  = bot_right-1;
+    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
+    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
 //    // TODO: Save num_lons and num_lats in the world object
-    std::cout << "Deforming the bottom... "  << bot_right+4 << std::endl;
-//    this_world.deformBottom(bot_left,1.0);
-//    this_world.deformBottom(top_left,1.0);
-//    this_world.deformBottom(top_right,1.0);
-    this_world.setSquareHeight(0,1001.0);
-    double L = this_world.square(0).length();
-    this_world.setSquareVelocity(0, tsunamisquares::Vec<2>(L/2, -L/2));
+    std::cout << "Deforming the bottom... " << std::endl;
+    this_world.deformBottom(bot_left,1.0);
+    this_world.deformBottom(top_left,1.0);
+    this_world.deformBottom(top_right,1.0);
+    this_world.deformBottom(bot_right,1.0);
+//    this_world.setSquareHeight(0,1001.0);
+//    double Lx = this_world.square(0).Lx();
+//    double Ly = this_world.square(0).Ly();
+//    this_world.setSquareVelocity(0, tsunamisquares::Vec<2>(Lx/2, -Ly/2));
     
-    
-    this_world.write_file_kml("test_kml.kml");
-    
+    //this_world.write_file_kml("Pacific_36.kml");
+
     // -------- Prepare a run to write to file ----------------------               
-//    double dt = 1; //seconds
-//    int N_steps = 4; //number of time steps
-//    int current_step = 0;
-//    int update_step = 2;
-//    int save_step = 1;
-//    double max_time = N_steps*dt;
-//    double time = 0.0;
-//    ids = this_world.getSquareIDs();
-//    
-//    // Open the output file
-//    out_file.open(file_name.c_str());
-//    // Write the header
-//    out_file << "# time \t lon \t lat \t height \n";
-//    std::cout << "Moving squares..";
-//    while (time < max_time) {
-//        // If this is a writing step, print status
-//        if (current_step%update_step == 0) {
-//            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
-//            std::cout << std::flush;
-//        }
-//    
-//        // Write the current state to file
-//        if (current_step%save_step == 0) {
-//            for (it=ids.begin(); it!=ids.end(); ++it){
-//                this_world.write_square_ascii(out_file, time, *it);
-//            }
-//        }
-//        // Move the squares
-//        this_world.moveSquares(dt);
-//        time += dt;
-//        current_step += 1;
-//    }
-//    out_file.close();
-//    std::cout << std::endl << "Results written to " << file_name << std::endl;
+    double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds    
+    int N_steps = 20; //number of time steps
+    int current_step = 0;
+    int update_step = 1;
+    int save_step = 1;
+    double max_time = N_steps*dt;
+    double time = 0.0;
+    ids = this_world.getSquareIDs();
+    
+    // Open the output file
+    out_file.open(file_name.c_str());
+    // Write the header
+    out_file << "# time \t lon \t lat \t height \n";
+    std::cout << "Moving squares..";
+    while (time < max_time) {
+        // If this is a writing step, print status
+        if (current_step%update_step == 0) {
+            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
+            std::cout << std::flush;
+        }
+    
+        // Write the current state to file
+        if (current_step%save_step == 0) {
+            for (it=ids.begin(); it!=ids.end(); ++it){
+                this_world.write_square_ascii(out_file, time, *it);
+            }
+        }
+        // Move the squares
+        //this_world.moveSquares(dt);
+        this_world.diffuseSquares(dt);
+        time += dt;
+        current_step += 1;
+    }
+    out_file.close();
+    std::cout << std::endl << "Results written to " << file_name << std::endl;
     return 0;
 }
 
