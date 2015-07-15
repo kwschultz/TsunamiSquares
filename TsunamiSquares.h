@@ -243,6 +243,14 @@ namespace tsunamisquares {
             double volume(void) const {
                 return _data._Lx*_data._Ly*_data._height;
             };
+            
+            double mass(void) const {
+                return _data._density*volume();
+            };
+            
+            Vec<2> momentum(void) const {
+                return _data._velocity*mass();
+            };
     
     };
             
@@ -333,9 +341,6 @@ namespace tsunamisquares {
             Vec<2> squareLatLon(const UIndex &square_id) const;
             double squareDepth(const UIndex &square_id) const;
             double squareLevel(const UIndex &square_id) const;
-            double squareMass(const UIndex &square_id) const;
-            double squareVolume(const UIndex &square_id) const;
-            Vec<2> squareMomentum(const UIndex &square_id) const;
             // ======= Initial condition setup functions ======
             void setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo);
             void setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel);
