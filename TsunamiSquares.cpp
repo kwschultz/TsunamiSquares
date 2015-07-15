@@ -72,7 +72,7 @@ void tsunamisquares::World::diffuseSquares(const double dt) {
             //assertThrow(volume_change >= 0, "Volume change should be positive");
             height_change = new_level - squareLevel(it->first);
             // Transfer the proportional amount of momentum
-            //momentum_change = (it->second.momentum())*volume_change/(it->second.volume());
+            momentum_change = (it->second.momentum())*volume_change/(it->second.volume());
             
             if (debug) {
                 std::cout << "----> Diffusing Square " << it->second.id() << std::endl;
@@ -82,7 +82,8 @@ void tsunamisquares::World::diffuseSquares(const double dt) {
                 std::cout << "-> neighbors " << std::endl;
             }
             
-            // For continuity, must self-add 1/4 of the volume change to edges and 1/2 to corners
+            // For continuity, must self-add 1/4 of the volume change to edges and 1/2 to corners.
+            // This also balances the momentum distribution.
             int minLat = squareLatLon(it->first)[0] == min_lat();
             int maxLat = squareLatLon(it->first)[0] == max_lat();
             int minLon = squareLatLon(it->first)[1] == min_lon();
@@ -103,19 +104,16 @@ void tsunamisquares::World::diffuseSquares(const double dt) {
                 nit = _squares.find(*id_it);
                 // Divide up the diffused volume equally amongst neighbors
                 add_height = volume_change/( nit->second.area()*4.0);
-                if (debug) {
-                    std::cout << " " << *id_it << std::endl;
-                    std::cout << "old level: " << squareLevel(nit->first) << std::endl;
-                    std::cout << "new level: " << add_height + squareLevel(nit->first) << std::endl;
-                }
                 nit->second.set_updated_height( nit->second.updated_height() + add_height);
+                nit->second.set_updated_momentum( nit->second.updated_momentum() + momentum_change/4.0);
             }
         }
     }
     
-    // Reset the heights based on the changes
+    // Reset the heights and velocities based on the changes
     for (it=_squares.begin(); it!=_squares.end(); ++it) {
         it->second.set_height( it->second.updated_height() );
+        it->second.set_velocity( it->second.updated_momentum() / it->second.mass());
     }
 }
 
