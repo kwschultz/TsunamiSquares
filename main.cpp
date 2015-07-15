@@ -27,14 +27,14 @@ int main (int argc, char **argv) {
     tsunamisquares::SquareIDSet::const_iterator it;
     tsunamisquares::SquareIDSet                 ids;
     std::ofstream                               out_file;
-    const std::string       file_name = "accel_bump_900_dt10_diffusion.txt";
+    const std::string       file_name = "accel_bump_5184_dt10_diffusion.txt";
     // Diffusion constant (fit to a reasonable looking sim)
     double D = 140616.45;
     
     this_world.clear();
     //this_world.read_file_ascii("test_file.txt");
-    std::cout << "Reading...  Pacific_900.txt" << std::endl;
-    this_world.read_bathymetry("Pacific_900.txt");
+    std::cout << "Reading...  Pacific_5184.txt" << std::endl;
+    this_world.read_bathymetry("Pacific_5184.txt");
     this_world.info();
 
     ids = this_world.getSquareIDs();
@@ -68,7 +68,7 @@ int main (int argc, char **argv) {
 
     // -------- Prepare a run to write to file ----------------------               
     double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds    
-    int N_steps = 20; //number of time steps
+    int N_steps = 60; //number of time steps
     int current_step = 0;
     int update_step = 1;
     int save_step = 1;
