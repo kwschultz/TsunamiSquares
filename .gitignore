@@ -163,3 +163,5 @@ TsunamiSquares
 *.grd
 *.kml
 *.pptx
+local/
+*.pyc

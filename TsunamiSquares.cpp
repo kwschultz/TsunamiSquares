@@ -672,7 +672,7 @@ void tsunamisquares::ModelIO::next_line(std::ostream &out_stream) const {
 void tsunamisquares::Vertex::read_bathymetry(std::istream &in_stream) {
     std::stringstream   ss(next_line(in_stream));
     
-    ss >> _data._lat;
+    ss >> _data._lat; 
     ss >> _data._lon;
     ss >> _data._alt;
 }
@@ -874,6 +874,54 @@ int tsunamisquares::World::write_file_kml(const std::string &file_name) {
     out_file << "</kml>\n";
 
     out_file.close();
+
+    return 0;
+}
+
+int tsunamisquares::World::deformFromFile(const std::string &file_name) {
+    std::ifstream   in_file;
+    UIndex          i, num_points, mappedID;
+    double          dz;
+    Vec<2>          location;
+    std::map<UIndex, Vertex>::iterator vit;
+    std::map<UIndex, Square>::iterator sit;
+    LatLonDepth     vertex_lld;
+
+    in_file.open(file_name.c_str());
+
+    if (!in_file.is_open()) return -1;
+
+    // Read the first line describing the number of sections, etc
+    std::stringstream desc_line(next_line(in_file));
+    desc_line >> num_points;
+
+    // Read the points, find nearest square, deform the bottom
+    for (i=0; i<num_points; ++i) {
+        Vertex     new_vert;
+        new_vert.read_bathymetry(in_file);
+        new_vert.set_lld(new_vert.lld(), getBase());
+        
+        // Get location (x,y) for the lat/lon point and get the altitude change
+        location = new_vert.xy();
+        dz  = new_vert.lld().altitude();
+        
+        // Find the closest square, grab its vertex
+        mappedID = whichSquare(location);
+        sit = _squares.find( mappedID );
+        vit = _vertices.find( sit->second.vertex() );
+        
+        // Get the current LLD data for this closest vertex
+        vertex_lld = vit->second.lld();
+        
+        // Update the altitude of the vertex by the amount dz
+        vertex_lld.set_altitude( vertex_lld.altitude() + dz);
+        
+        // Set the new position
+        vit->second.set_lld(vertex_lld, getBase());        
+        
+    }
+
+    in_file.close();
 
     return 0;
 }

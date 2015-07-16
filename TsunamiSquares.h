@@ -346,5 +346,6 @@ namespace tsunamisquares {
             // ======= File I/O ====================
             int write_file_kml(const std::string &file_name);
             void write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const;
+            int deformFromFile(const std::string &file_name);
     };
 }
