@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Kasey W. Schultz, Steven N. Ward, Eric M. Heien
+// Copyright (c) 2015 Kasey W. Schultz
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -17,8 +17,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
-
-// Not going to use any compiler flags/directives yet, assuming HDF5_FOUND=True
 
 #define UNDEFINED_ELEMENT_ID    UINT_MAX
 

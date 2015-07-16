@@ -48,45 +48,5 @@ def write_grid(out_file_name, lats, lons, bathy):
     
     
     
-if __name__ == "__main__":
-
-    ETOPO1_FILE = "ETOPO1_Bed_g_gmt4.grd"    
-    SAVE_NAME = "Pacific_"
-    NSQUARES = 5184
-    if NSQUARES==900:
-        MIN_LAT = 34.5
-        MAX_LAT = 35
-        MIN_LON = -130.0
-        MAX_LON = -129.5
-        SAVE_NAME += "900.txt"
-    elif NSQUARES==36:
-        MIN_LAT = 34.9
-        MAX_LAT = 35
-        MIN_LON = -130.0
-        MAX_LON = -129.9
-        SAVE_NAME += "36.txt"
-    elif NSQUARES==4:
-        MIN_LAT = 34.95
-        MAX_LAT = 35
-        MIN_LON = -130.0
-        MAX_LON = -129.95
-        SAVE_NAME += "9.txt"
-    elif NSQUARES==3600:
-        MIN_LAT = 34
-        MAX_LAT = 35
-        MIN_LON = -130.0
-        MAX_LON = -129.0
-        SAVE_NAME += "3600.txt"
-    elif NSQUARES==5184:
-        MIN_LAT = 33.8
-        MAX_LAT = 35
-        MIN_LON = -130.0
-        MAX_LON = -128.8
-        SAVE_NAME += "5184.txt"
-    
-    lats,lons,bathy=grab_ETOPO1_subset(ETOPO1_FILE,min_lat=MIN_LAT,max_lat=MAX_LAT,min_lon=MIN_LON,max_lon=MAX_LON)
-    write_grid(SAVE_NAME,lats,lons,bathy)
-    
-    
     
     
