@@ -689,6 +689,7 @@ void tsunamisquares::World::write_square_ascii(std::ostream &out_stream, const d
     }
 
     out_stream << squareLevel(square_id) << "\t\t";
+    out_stream << squareDepth(square_id) << "\t\t";
 
     next_line(out_stream);
 }

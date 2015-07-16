@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Kasey W. Schultz, Steven N. Ward
+// Copyright (c) 2015 Kasey W. Schultz
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -19,6 +19,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 #include "TsunamiSquares.h"
+#include <time.h>
 
 int main (int argc, char **argv) {
     // Initialize the world (where the squares live), squares and vertices
@@ -27,48 +28,57 @@ int main (int argc, char **argv) {
     tsunamisquares::SquareIDSet::const_iterator it;
     tsunamisquares::SquareIDSet                 ids;
     std::ofstream                               out_file;
-    const std::string       file_name = "accel_bump_5184_dt10_diffusion.txt";
+    clock_t                                     start,end;
+    const std::string       file_name = "local/Channel_Islands_LargeSubset_dt10.txt";
     // Diffusion constant (fit to a reasonable looking sim)
     double D = 140616.45;
+    // Start the clock
+    start = clock();
     
     this_world.clear();
     //this_world.read_file_ascii("test_file.txt");
-    std::cout << "Reading...  Pacific_5184.txt" << std::endl;
-    this_world.read_bathymetry("Pacific_5184.txt");
+    std::cout << std::endl << "Reading...  local/Channel_Islands_LargeSubset.txt" << std::endl;
+    this_world.read_bathymetry("local/Channel_Islands_LargeSubset.txt");
     this_world.info();
-
     ids = this_world.getSquareIDs();
+    //this_world.write_file_kml("Pacific_36.kml");
+    
+    // Compute the time step given the diffusion constant D
+    double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds 
 
     // Flatten the bathymetry
-    double new_depth = -1000.0;
-    std::cout << "Flattening the bottom...";
-    this_world.flattenBottom(new_depth);
+//    double new_depth = -1000.0;
+//    std::cout << "Flattening the bottom...";
+//    this_world.flattenBottom(new_depth);
+    
     
     // Put water into squares to bring water level up to sealevel.
     std::cout << "Filling with water...";
     this_world.fillToSeaLevel();
     
     // Initial conditions
-    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
-    tsunamisquares::UIndex bot_left  = bot_right-1;
-    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
-    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
-//    // TODO: Save num_lons and num_lats in the world object
-    std::cout << "Deforming the bottom... " << std::endl;
-    this_world.deformBottom(bot_left,100.0);
-    this_world.deformBottom(top_left,100.0);
-    this_world.deformBottom(top_right,100.0);
-    this_world.deformBottom(bot_right,100.0);
-//    this_world.setSquareHeight(0,1001.0);
-//    double Lx = this_world.square(0).Lx();
-//    double Ly = this_world.square(0).Ly();
-//    this_world.setSquareVelocity(0, tsunamisquares::Vec<2>(Lx/2, -Ly/2));
+//    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
+//    tsunamisquares::UIndex bot_left  = bot_right-1;
+//    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
+//    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
+////    // TODO: Save num_lons and num_lats in the world object
+//    std::cout << "Deforming the bottom... " << std::endl;
+//    this_world.deformBottom(bot_left,100.0);
+//    this_world.deformBottom(top_left,100.0);
+//    this_world.deformBottom(top_right,100.0);
+//    this_world.deformBottom(bot_right,100.0);
     
-    //this_world.write_file_kml("Pacific_36.kml");
+    // DEFORM VIA FILE
+    //this_world.deformFromFile("local/Channel_Islands_subset_dispField_event1157.txt");
+    
+//    ids = this_world.getSquareIDs();
+//    
+//    for (it=ids.begin(); it!=ids.end(); ++it) {
+//        this_world.printSquare(*it);
+//    }
 
     // -------- Prepare a run to write to file ----------------------               
-    double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds    
-    int N_steps = 60; //number of time steps
+    int N_steps = 1; //number of time steps
     int current_step = 0;
     int update_step = 1;
     int save_step = 1;
@@ -79,8 +89,9 @@ int main (int argc, char **argv) {
     // Open the output file
     out_file.open(file_name.c_str());
     // Write the header
-    out_file << "# time \t lon \t lat \t height \n";
-    std::cout << "Moving squares..";
+    out_file << "# time \t lon \t\t lat \t\t height \t altitude \n";
+    std::cout.precision(3);
+    std::cout << "Moving squares....time_step=" <<dt << "...";
     while (time < max_time) {
         // If this is a writing step, print status
         if (current_step%update_step == 0) {
@@ -102,6 +113,9 @@ int main (int argc, char **argv) {
     }
     out_file.close();
     std::cout << std::endl << "Results written to " << file_name << std::endl;
+    end = clock();
+    std::cout.precision(5);
+    std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
     return 0;
 }
 

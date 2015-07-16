@@ -79,42 +79,56 @@ def make_animation(sim_data, FPS, DPI, ELEV, AZIM, T_MIN, T_MAX, T_STEP, N_STEP)
             TIME +=T_STEP
 
 
+
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
     # Load TsunamiSquares data
     #sim_file = "accel_middle_bump_renormFractions_LxLy_900_dt20.txt"
     
-    # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
-    ETOPO1_FILE = "ETOPO1_Bed_g_gmt4.grd"
-    SAVE_NAME = "local/Channel_Islands.txt"
-    MODEL     = "../Desktop/RUNNING/UCERF2/ALLCAL2_VQmeshed_3km.h5"
-    EVENTS    = "../Desktop/RUNNING/events_greensTrimmed_ALLCAL2_VQmeshed_3km_EQSim_StressDrops_4kyr_24June2015.h5"
-    EVID      = 2497
-    MIN_LAT = 33.9208
-    MAX_LAT = 34.154
-    MIN_LON = -119.7588
-    MAX_LON = -119.536
-    # --- write grid ------
-    lats,lons,bathy = read_ETOPO1.grab_ETOPO1_subset(ETOPO1_FILE,min_lat=MIN_LAT,max_lat=MAX_LAT,min_lon=MIN_LON,max_lon=MAX_LON)
-    read_ETOPO1.write_grid(SAVE_NAME,lats,lons,bathy)
-    # ---- compute field and write it ------
-    system("python ../vq/pyvq/pyvq/pyvq.py --event_file {} --model_file {} --event_id {} --lld_file {} --field_eval".format(EVENTS, MODEL, EVID, SAVE_NAME))
+    MODE = "generate"
     
-    sys.exit()
+    if MODE == "generate":
+        # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
+        ETOPO1_FILE = "ETOPO1_Bed_g_gmt4.grd"
+        SAVE_NAME = "local/Channel_Islands_LargeSubset.txt"
+        MODEL     = "../Desktop/RUNNING/UCERF2/ALLCAL2_VQmeshed_3km.h5"
+        EVENTS    = "../Desktop/RUNNING/events_greensTrimmed_ALLCAL2_VQmeshed_3km_EQSim_StressDrops_4kyr_24June2015.h5"
+        EVID      = 1157
+        # Full range
+        #MIN_LAT = 33.503
+        #MAX_LAT = 34.519
+        #MIN_LON = -120.518
+        #MAX_LON = -118.883
+        # Inner subset
+        #MIN_LAT = 33.874
+        #MAX_LAT = 34.137
+        #MIN_LON = -119.961
+        #MAX_LON = -119.35
+        # Larger inner subset for tests
+        MIN_LAT = 33.874
+        MAX_LAT = 34.4
+        MIN_LON = -119.961
+        MAX_LON = -119.35
+        # --- write grid ------
+        lats,lons,bathy = read_ETOPO1.grab_ETOPO1_subset(ETOPO1_FILE,min_lat=MIN_LAT,max_lat=MAX_LAT,min_lon=MIN_LON,max_lon=MAX_LON)
+        read_ETOPO1.write_grid(SAVE_NAME,lats,lons,bathy)
+        # ---- compute field and write it ------
+        system("python ../vq/pyvq/pyvq/pyvq.py --event_file {} --model_file {} --event_id {} --lld_file {} --field_eval".format(EVENTS, MODEL, EVID, SAVE_NAME))
     
-    sim_file = "local/accel_bump_5184_dt10_diffusion_VandM.txt"
-    save_file = sim_file.split(".")[0]+".mp4"
-    sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('lat','f8'),('lon','f8'), ('z','f8')])
-    FPS = 10
-    DPI = 100
-    ELEV = 20
-    AZIM = None
-    T_MAX,T_MIN = sim_data['time'].max(),sim_data['time'].min()
-    T_STEP = np.unique(sim_data['time'])[1] - np.unique(sim_data['time'])[0]
-    assert T_STEP > 0
-    N_STEP = float(T_MAX-T_MIN)/T_STEP
-    # Do it
-    make_animation(sim_data, FPS, DPI, ELEV, AZIM, T_MIN, T_MAX, T_STEP, N_STEP)
+    if MODE == "animate":
+        sim_file = "local/Channel_Islands_LargeSubset_dt10.txt"
+        save_file = sim_file.split(".")[0]+".mp4"
+        sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('lat','f8'),('lon','f8'), ('z','f8'), ('alt','f8')])
+        FPS = 3
+        DPI = 100
+        ELEV = 20
+        AZIM = None
+        T_MAX,T_MIN = sim_data['time'].max(),sim_data['time'].min()
+        T_STEP = np.unique(sim_data['time'])[1] - np.unique(sim_data['time'])[0]
+        assert T_STEP > 0
+        N_STEP = float(T_MAX-T_MIN)/T_STEP
+        # Do it
+        make_animation(sim_data, FPS, DPI, ELEV, AZIM, T_MIN, T_MAX, T_STEP, N_STEP)
 
 
 
