@@ -90,25 +90,25 @@ if __name__ == "__main__":
     if MODE == "generate":
         # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
         ETOPO1_FILE = "ETOPO1_Bed_g_gmt4.grd"
-        SAVE_NAME = "local/Channel_Islands_LargeSubset.txt"
+        SAVE_NAME = "local/Channel_Islands.txt"
         MODEL     = "../Desktop/RUNNING/UCERF2/ALLCAL2_VQmeshed_3km.h5"
         EVENTS    = "../Desktop/RUNNING/events_greensTrimmed_ALLCAL2_VQmeshed_3km_EQSim_StressDrops_4kyr_24June2015.h5"
         EVID      = 1157
         # Full range
-        #MIN_LAT = 33.503
-        #MAX_LAT = 34.519
-        #MIN_LON = -120.518
-        #MAX_LON = -118.883
+        MIN_LAT = 33.503
+        MAX_LAT = 34.519
+        MIN_LON = -120.518
+        MAX_LON = -118.883
         # Inner subset
         #MIN_LAT = 33.874
         #MAX_LAT = 34.137
         #MIN_LON = -119.961
         #MAX_LON = -119.35
         # Larger inner subset for tests
-        MIN_LAT = 33.874
-        MAX_LAT = 34.4
-        MIN_LON = -119.961
-        MAX_LON = -119.35
+        #MIN_LAT = 33.874
+        #MAX_LAT = 34.4
+        #MIN_LON = -119.961
+        #MAX_LON = -119.35
         # --- write grid ------
         lats,lons,bathy = read_ETOPO1.grab_ETOPO1_subset(ETOPO1_FILE,min_lat=MIN_LAT,max_lat=MAX_LAT,min_lon=MIN_LON,max_lon=MAX_LON)
         read_ETOPO1.write_grid(SAVE_NAME,lats,lons,bathy)
@@ -116,10 +116,10 @@ if __name__ == "__main__":
         system("python ../vq/pyvq/pyvq/pyvq.py --event_file {} --model_file {} --event_id {} --lld_file {} --field_eval".format(EVENTS, MODEL, EVID, SAVE_NAME))
     
     if MODE == "animate":
-        sim_file = "local/Channel_Islands_LargeSubset_dt10.txt"
+        sim_file = "local/TS_Channel_Islands_dispField_event1157_dt10_flatBottom_shorter.txt"
         save_file = sim_file.split(".")[0]+".mp4"
-        sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('lat','f8'),('lon','f8'), ('z','f8'), ('alt','f8')])
-        FPS = 3
+        sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('lat','f8'),('lon','f8'), ('z','f8')])
+        FPS = 5
         DPI = 100
         ELEV = 20
         AZIM = None

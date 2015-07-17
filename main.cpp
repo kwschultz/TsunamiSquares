@@ -23,28 +23,31 @@
 
 int main (int argc, char **argv) {
     // Initialize the world (where the squares live), squares and vertices
-    tsunamisquares::World                  this_world;
-    tsunamisquares::Vec<2>                      accel, velo, loc; //auto-init to (0,0)
+    tsunamisquares::World                       this_world;
     tsunamisquares::SquareIDSet::const_iterator it;
     tsunamisquares::SquareIDSet                 ids;
     std::ofstream                               out_file;
     clock_t                                     start,end;
-    const std::string       file_name = "local/Channel_Islands_LargeSubset_dt10.txt";
+    const std::string       out_file_name = "local/Channel_Islands_LargeSubset_dt10_bathy.txt";
+    const std::string       bathy_file = "local/Channel_Islands.txt";
+    const std::string       kml_file = "local/Channel_Islands.kml";
     // Diffusion constant (fit to a reasonable looking sim)
     double D = 140616.45;
     // Start the clock
     start = clock();
     
+    // Read in the bathymetry data
     this_world.clear();
-    //this_world.read_file_ascii("test_file.txt");
-    std::cout << std::endl << "Reading...  local/Channel_Islands_LargeSubset.txt" << std::endl;
-    this_world.read_bathymetry("local/Channel_Islands_LargeSubset.txt");
+    std::cout << std::endl << "Reading..."   << bathy_file.c_str() << std::endl;
+    this_world.read_bathymetry(bathy_file.c_str());
     this_world.info();
     ids = this_world.getSquareIDs();
-    //this_world.write_file_kml("Pacific_36.kml");
+    std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
+    this_world.write_file_kml(kml_file.c_str());
     
     // Compute the time step given the diffusion constant D
     double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds 
+    
 
     // Flatten the bathymetry
 //    double new_depth = -1000.0;
@@ -53,7 +56,7 @@ int main (int argc, char **argv) {
     
     
     // Put water into squares to bring water level up to sealevel.
-    std::cout << "Filling with water...";
+    std::cout << "Filling with water..." << std::flush;
     this_world.fillToSeaLevel();
     
     // Initial conditions
@@ -69,7 +72,7 @@ int main (int argc, char **argv) {
 //    this_world.deformBottom(bot_right,100.0);
     
     // DEFORM VIA FILE
-    //this_world.deformFromFile("local/Channel_Islands_subset_dispField_event1157.txt");
+    this_world.deformFromFile("local/Channel_Islands_subset_dispField_event1157.txt");
     
 //    ids = this_world.getSquareIDs();
 //    
@@ -78,7 +81,7 @@ int main (int argc, char **argv) {
 //    }
 
     // -------- Prepare a run to write to file ----------------------               
-    int N_steps = 1; //number of time steps
+    int N_steps = 50; //number of time steps
     int current_step = 0;
     int update_step = 1;
     int save_step = 1;
@@ -87,9 +90,9 @@ int main (int argc, char **argv) {
     ids = this_world.getSquareIDs();
     
     // Open the output file
-    out_file.open(file_name.c_str());
+    out_file.open(out_file_name.c_str());
     // Write the header
-    out_file << "# time \t lon \t\t lat \t\t height \t altitude \n";
+    out_file << "# time \t lon \t\t lat \t\t height \n";
     std::cout.precision(3);
     std::cout << "Moving squares....time_step=" <<dt << "...";
     while (time < max_time) {
@@ -112,7 +115,7 @@ int main (int argc, char **argv) {
         current_step += 1;
     }
     out_file.close();
-    std::cout << std::endl << "Results written to " << file_name << std::endl;
+    std::cout << std::endl << "Results written to " << out_file_name << std::endl;
     end = clock();
     std::cout.precision(5);
     std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
