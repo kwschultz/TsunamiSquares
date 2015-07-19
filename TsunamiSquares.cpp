@@ -680,6 +680,7 @@ void tsunamisquares::Vertex::read_bathymetry(std::istream &in_stream) {
 void tsunamisquares::World::write_square_ascii(std::ostream &out_stream, const double &time, const UIndex &square_id) const {
     unsigned int        i;
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
+    double waterLevel, waterHeight;
 
     out_stream << time << "\t";
 
@@ -688,7 +689,14 @@ void tsunamisquares::World::write_square_ascii(std::ostream &out_stream, const d
         out_stream << squareLatLon(square_id)[i] << "\t\t";
     }
 
-    out_stream << squareLevel(square_id) << "\t\t";
+    // Don't write water level for the hi and dry squares until they take on water
+    waterLevel  = squareLevel(square_id);
+    waterHeight = square_it->second.height();
+    if (waterHeight == 0.0 && waterLevel >= 0.0) {
+        out_stream << waterHeight << "\t\t";
+    } else {
+        out_stream << waterLevel << "\t\t";
+    }
 
     next_line(out_stream);
 }
