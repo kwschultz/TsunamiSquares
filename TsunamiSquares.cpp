@@ -279,21 +279,53 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
     if (squareLatLon(square_it->first)[0] == min_lat() || squareLatLon(square_it->first)[0] == max_lat() || squareLatLon(square_it->first)[1] == min_lon() || squareLatLon(square_it->first)[1] == max_lon() ) {
         gradient = Vec<2>(0.0,0.0);
     } else {
-        // Water level of neighbor squares
+        // Altitude of water level of neighbor squares
         double z_left   = squareLevel(leftID);
         double z_right  = squareLevel(rightID);
         double z_top    = squareLevel(topID);
         double z_bottom = squareLevel(bottomID);
 
+//        double h_left   = _squares.find(leftID)->second.height();
+//        double h_right  = _squares.find(rightID)->second.height();
+//        double h_top    = _squares.find(topID  )->second.height();
+//        double h_bottom = _squares.find(bottomID)->second.height();
+        
         // X,Y of neighbor squares
         Vec<2> center_L = squareCenter(leftID);
         Vec<2> center_R = squareCenter(rightID);
         Vec<2> center_T = squareCenter(topID);
         Vec<2> center_B = squareCenter(bottomID);
         
-        // gradient = (dz/dx, dz/dy)
+        // ================================================================
+        // Gradient = (dz/dx, dz/dy)
+        // Handle the cases with dry cells on either left/right/top/bottom
+        // ================================================================
+//        if (h_left == 0.0 && h_right == 0.0 && h_top == 0.0 && h_bottom == 0.0) {
+//        // Case: No water on any side
+//            gradient[0] = 0.0;
+//            gradient[1] = 0.0;
+//        } else if (h_left != 0.0 && h_right != 0.0 && h_top != 0.0 && h_bottom != 0.0) {
+//        // Case: Water on all sides
+//            gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
+//            gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
+//        } else {
+//        // Case: No water on at least one side
+//            if (h_left == 0.0 && h_right == 0.0) {
+//            // Both sides dry
+//                gradient[0] = 0.0;
+//            } else if (h_left != 0.0 && h_right != 0.0) {
+//            // Neither lateral sides are dry
+//                gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
+//            } else if () {
+//            //
+//                
+//            }
+//            
+//        }
+        
         gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
         gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
+        
         
         if (debug) {
             std::cout << "square  " << square_id << std::endl;
@@ -310,15 +342,20 @@ void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
     Vec<2> grav_accel, friction_accel, gradient;
     double G = 9.80665; //mean gravitational acceleration at Earth's surface [NIST]
     
-    // gravitational acceleration due to the slope of the water surface
-    gradient = getGradient(square_id);
-    grav_accel = gradient*G*(-1.0);
-    
-    // frictional acceleration from fluid particle interaction
-    friction_accel = square_it->second.velocity()*(square_it->second.velocity().mag())*(square_it->second.friction())/(-1.0*(square_it->second.height()));
-    
-    // Set the acceleration
-    square_it->second.set_accel(grav_accel + friction_accel);
+    // Only accelerate the water in this square IF there is water in this square
+    if (square_it->second.height() != 0.0) {
+        // gravitational acceleration due to the slope of the water surface
+        gradient = getGradient(square_id);
+        grav_accel = gradient*G*(-1.0);
+        
+        // frictional acceleration from fluid particle interaction
+        friction_accel = square_it->second.velocity()*(square_it->second.velocity().mag())*(square_it->second.friction())/(-1.0*(square_it->second.height()));
+        
+        // Set the acceleration
+        square_it->second.set_accel(grav_accel + friction_accel);
+    } else {
+        square_it->second.set_accel( Vec<2>(0.0, 0.0) );
+    }
 }
 
 // Raise/lower the sea floor depth at the square's vertex by an amount "height_change"

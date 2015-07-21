@@ -28,7 +28,7 @@ int main (int argc, char **argv) {
     tsunamisquares::SquareIDSet                 ids;
     std::ofstream                               out_file;
     clock_t                                     start,end;
-    const std::string       out_file_name = "local/Channel_Islands_LargeSubset_dt10_bathy.txt";
+    const std::string       out_file_name = "local/Channel_Islands_1157disp_dt10_bathy_h0NoAccel.txt";
     const std::string       bathy_file = "local/Channel_Islands.txt";
     const std::string       kml_file = "local/Channel_Islands.kml";
     // Diffusion constant (fit to a reasonable looking sim)
@@ -81,7 +81,7 @@ int main (int argc, char **argv) {
 //    }
 
     // -------- Prepare a run to write to file ----------------------               
-    int N_steps = 50; //number of time steps
+    int N_steps = 10; //number of time steps
     int current_step = 0;
     int update_step = 1;
     int save_step = 1;
