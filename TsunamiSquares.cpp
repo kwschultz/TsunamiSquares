@@ -207,7 +207,7 @@ void tsunamisquares::World::moveSquares(const double dt) {
             
             // Then normalize these fractions to enforce conservation.
             for (frac_it=originalFractions.begin(); frac_it!=originalFractions.end(); ++frac_it) {
-                assertThrow((frac_it->second)/fraction_sum <= 1, "Area fraction must be less than 1.");
+                //assertThrow((frac_it->second)/fraction_sum <= 1, "Area fraction must be less than 1.");
                 renormFractions.insert(std::make_pair(frac_it->first, (frac_it->second)/fraction_sum));
             }
             
@@ -257,6 +257,26 @@ void tsunamisquares::World::moveSquares(const double dt) {
     
 }
 
+void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
+    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
+    Vec<2> grav_accel, friction_accel, gradient;
+    double G = 9.80665; //mean gravitational acceleration at Earth's surface [NIST]
+    
+    // Only accelerate the water in this square IF there is water in this square
+    if (square_it->second.height() != 0.0) {
+        // gravitational acceleration due to the slope of the water surface
+        gradient = getGradient(square_id);
+        grav_accel = gradient*G*(-1.0);
+        
+        // frictional acceleration from fluid particle interaction
+        friction_accel = square_it->second.velocity()*(square_it->second.velocity().mag())*(square_it->second.friction())/(-1.0*(square_it->second.height()));
+        
+        // Set the acceleration
+        square_it->second.set_accel(grav_accel + friction_accel);
+    } else {
+        square_it->second.set_accel( Vec<2>(0.0, 0.0) );
+    }
+}
 
 tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_id) const {
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
@@ -284,11 +304,14 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
         double z_right  = squareLevel(rightID);
         double z_top    = squareLevel(topID);
         double z_bottom = squareLevel(bottomID);
+        double z_mid    = squareLevel(square_id);
 
-//        double h_left   = _squares.find(leftID)->second.height();
-//        double h_right  = _squares.find(rightID)->second.height();
-//        double h_top    = _squares.find(topID  )->second.height();
-//        double h_bottom = _squares.find(bottomID)->second.height();
+        // Thickness of water in neighbor squares
+        double h_left   = _squares.find(leftID)->second.height();
+        double h_right  = _squares.find(rightID)->second.height();
+        double h_top    = _squares.find(topID  )->second.height();
+        double h_bottom = _squares.find(bottomID)->second.height();
+        double h_mid    = square_it->second.height();
         
         // X,Y of neighbor squares
         Vec<2> center_L = squareCenter(leftID);
@@ -298,34 +321,39 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
         
         // ================================================================
         // Gradient = (dz/dx, dz/dy)
-        // Handle the cases with dry cells on either left/right/top/bottom
+        // Handle the cases with dry cells on either left/right/top/bottom.
+        // IGNORE cells that are hi and dry
         // ================================================================
-//        if (h_left == 0.0 && h_right == 0.0 && h_top == 0.0 && h_bottom == 0.0) {
-//        // Case: No water on any side
-//            gradient[0] = 0.0;
-//            gradient[1] = 0.0;
-//        } else if (h_left != 0.0 && h_right != 0.0 && h_top != 0.0 && h_bottom != 0.0) {
-//        // Case: Water on all sides
-//            gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
-//            gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
-//        } else {
-//        // Case: No water on at least one side
-//            if (h_left == 0.0 && h_right == 0.0) {
-//            // Both sides dry
-//                gradient[0] = 0.0;
-//            } else if (h_left != 0.0 && h_right != 0.0) {
-//            // Neither lateral sides are dry
-//                gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
-//            } else if () {
-//            //
-//                
-//            }
-//            
-//        }
-        
-        gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
-        gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
-        
+        if (h_left == 0.0 && h_right == 0.0 && h_top == 0.0 && h_bottom == 0.0) {
+        // Case: No water on any side
+        // TODO: Is this check needed?
+            gradient[0] = 0.0;
+            gradient[1] = 0.0;
+        } else  {
+            if (h_left > 0.0 && h_right > 0.0 && h_top > 0.0 && h_bottom > 0.0) {
+            // Case: No dry neighbors, then do normal gradient
+                gradient[0] = (z_right-z_left)/( center_L.dist(center_R) );
+                gradient[1] = (z_top-z_bottom)/( center_T.dist(center_B) );
+            }
+            
+            // Case: Hi and dry on the right, water to the left
+            if (h_right == 0.0 && z_right >= 0.0 && h_left != 0.0) {
+                gradient[0] = (z_mid-z_left)/( center_L.dist(center) );
+            } else if (h_left == 0.0 && z_left >= 0.0 && h_right != 0.0) {
+            // Case: Hi and dry on the left, water to the right
+                gradient[0] = (z_right-z_mid)/( center_R.dist(center) );
+            }
+
+            
+            // Case: Hi and dry on the top, water on bottom
+            if (h_top == 0.0 && z_top >= 0.0 && h_bottom != 0.0) {
+                gradient[1] = (z_mid-z_bottom)/( center.dist(center_B) );
+            } else if (h_left == 0.0 && z_left >= 0.0 && h_right != 0.0) {
+            // Case: Hi and dry on the bottom, water on top
+                gradient[1] = (z_top-z_mid)/( center_T.dist(center) );
+            }
+            
+        }
         
         if (debug) {
             std::cout << "square  " << square_id << std::endl;
@@ -335,28 +363,9 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
     }
     
     return gradient;
+    
 }
 
-void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
-    std::map<UIndex, Square>::iterator square_it = _squares.find(square_id);
-    Vec<2> grav_accel, friction_accel, gradient;
-    double G = 9.80665; //mean gravitational acceleration at Earth's surface [NIST]
-    
-    // Only accelerate the water in this square IF there is water in this square
-    if (square_it->second.height() != 0.0) {
-        // gravitational acceleration due to the slope of the water surface
-        gradient = getGradient(square_id);
-        grav_accel = gradient*G*(-1.0);
-        
-        // frictional acceleration from fluid particle interaction
-        friction_accel = square_it->second.velocity()*(square_it->second.velocity().mag())*(square_it->second.friction())/(-1.0*(square_it->second.height()));
-        
-        // Set the acceleration
-        square_it->second.set_accel(grav_accel + friction_accel);
-    } else {
-        square_it->second.set_accel( Vec<2>(0.0, 0.0) );
-    }
-}
 
 // Raise/lower the sea floor depth at the square's vertex by an amount "height_change"
 void tsunamisquares::World::deformBottom(const UIndex &square_id, const double &height_change) {
