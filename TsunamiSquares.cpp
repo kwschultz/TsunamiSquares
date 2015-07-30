@@ -56,7 +56,11 @@ void tsunamisquares::World::diffuseSquares(const double dt) {
     Vec<2>                              momentum_change;
     SquareIDSet::iterator               id_it;
     bool debug = false;
-
+    
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //TODO: Check that I do not diffuse into dry squares (wetting them artificially)
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
     // Initialize updated_heights and momenta, will use this to store the net height and momentum changes
     for (it=_squares.begin(); it!=_squares.end(); ++it) {
         it->second.set_updated_height( it->second.height() );
@@ -743,6 +747,9 @@ void tsunamisquares::World::write_square_ascii(std::ostream &out_stream, const d
     } else {
         out_stream << waterLevel << "\t\t";
     }
+    
+    // Write the altitude of the bottom too
+    out_stream << squareDepth(square_id) << "\t\t";
 
     next_line(out_stream);
 }
