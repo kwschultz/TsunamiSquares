@@ -236,7 +236,7 @@ def eq_displacements(LLD_FILE, LEVELS, save_file):
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
     
-    MODE = "field_eval"
+    MODE = "animate"
     
     if MODE == "generate":
         # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
@@ -273,17 +273,18 @@ if __name__ == "__main__":
         system("python ../vq/PyVQ/pyvq/pyvq.py --field_eval  --event_file {} --model_file {} --event_id {} --lld_file {} ".format(EVENTS, MODEL, EVID, SAVE_NAME))
     
     if MODE == "animate":
-        sim_file = "local/Channel_Islands_1157disp_dt10_bathy_DryAccelCases_AltOut.txt"
+        sim_file = "local/Pacific_7200_central_upDown_line_D100k.txt"
         save_file = sim_file.split(".")[0]+"_colorChop_noLines.mp4"
         sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('lat','f8'),('lon','f8'), ('z','f8'), ('alt','f8')])
-        FPS = 3
+        FPS = 10
         DPI = 100
         T_MAX,T_MIN = sim_data['time'].max(),sim_data['time'].min()
         T_STEP = np.unique(sim_data['time'])[1] - np.unique(sim_data['time'])[0]
         assert T_STEP > 0
         N_STEP = float(T_MAX-T_MIN)/T_STEP
         # Do it
-        make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP, save_file)
+        #make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP, save_file)
+        make_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP)
 
 if MODE == "field_eval":
         Levels = [-.3, -.2, -.1, -.05, .05, .1, .2, .3]

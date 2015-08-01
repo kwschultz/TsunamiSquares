@@ -264,8 +264,8 @@ namespace tsunamisquares {
             LatLonDepth _base;
             double _min_lat, _max_lat, _min_lon, _max_lon;
             // Diffusion constant
-            static const double _D = 140616.45;
-            
+            static const double _D = 100000.0;//140616.45;
+        
         public:
             Square &new_square(void);
             Vertex &new_vertex(void);
