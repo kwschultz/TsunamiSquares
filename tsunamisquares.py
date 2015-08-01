@@ -10,6 +10,7 @@ import matplotlib.animation as manimation
 import matplotlib.colorbar as mcolorbar
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.basemap import Basemap
+import matplotlib.font_manager as mfont
 # -------
 import quakelib
 from os import system
@@ -86,7 +87,7 @@ def make_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP):
 
 
 # --------------------------------------------------------------------------------
-def make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP):
+def make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP, save_file):
     # Get ranges
     lon_min,lon_max = sim_data['lon'].min(),sim_data['lon'].max()
     lat_min,lat_max = sim_data['lat'].min(),sim_data['lat'].max()
@@ -96,9 +97,10 @@ def make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP):
     lat_range = lat_max - lat_min
     z_min,z_max = sim_data['z'].min(),sim_data['z'].max()
     cmap = plt.get_cmap('Blues_r')
-    norm = mcolor.Normalize(vmin=z_min, vmax=z_max)
+    norm = mcolor.Normalize(vmin=z_min/60, vmax=-z_min/60)
     interp = 'none'
     landcolor = '#FFFFCC'
+    framelabelfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=14)
     
     # Split the data up into arrays for each time step
     split_data = np.split(sim_data, np.unique(sim_data['time']).shape[0])
@@ -116,17 +118,20 @@ def make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP):
             llcrnrlon=lon_min, urcrnrlon=lon_max, lat_0=mean_lat, lon_0=mean_lon, resolution='h')
     m.ax = fig.add_subplot(111)
 
-    m.drawmeridians(np.arange(lon_min,lon_max,lon_range/5.0),labels=[0,0,0,1], linewidth=0)
-    m.drawparallels(np.arange(lat_min,lat_max,lat_range/5.0),labels=[1,0,0,0], linewidth=0)
-    m.drawcoastlines()
-    m.drawcountries()
-    m.drawstates()
-    m.fillcontinents(color=landcolor)
+    m.drawmeridians(np.linspace(lon_min,lon_max,num=5.0),labels=[0,0,0,1], linewidth=0)
+    m.drawparallels(np.linspace(lat_min,lat_max,num=5.0),labels=[1,0,0,0], linewidth=0)
+    m.drawcoastlines(linewidth=0.5)
+    #m.drawcountries()
+    #m.drawstates()
+    #m.fillcontinents(color=landcolor)
     #m.shadedrelief()
     
+    # Colorbar
     divider = make_axes_locatable(m.ax)
     cbar_ax = divider.append_axes("right", size="5%",pad=0.05)
+    plt.figtext(0.95, 0.7, r'water altitude $[m]$', rotation='vertical', fontproperties=framelabelfont)
     cb = mcolorbar.ColorbarBase(cbar_ax, cmap=cmap, norm=norm)
+    
     # Increment the time from T_MIN
     TIME = T_MIN
     
@@ -151,8 +156,8 @@ def make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP):
             # Masked array via conditional, don't color the land unless it has water on it
             masked_data = np.ma.masked_where(np.logical_and(np.array(Z == 0.0),np.array(ALT >= 0.0)), Z)
             
-            # Set masked pixels to certain color
-            cmap.set_bad('black', 0.0)  # alpha=0.0 for transparent, no color needed
+            # Set masked pixels to the land color
+            cmap.set_bad(landcolor, 1.0)  # set alpha=0.0 for transparent
             
             # Plot the surface for this time step
             if surface is None:
@@ -161,25 +166,83 @@ def make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP):
                 surface.set_data(masked_data)
                 
             # Text box with the time
-            plt.figtext(0.02, 0.82, 'Time: {:02d}:{:02d}'.format(int(time)/60, int(time)%60), bbox={'facecolor':'yellow', 'pad':5})
+            plt.figtext(0.129, 0.82, 'Time: {:02d}:{:02d}'.format(int(time)/60, int(time)%60), bbox={'facecolor':'yellow', 'pad':5})
                 
             writer.grab_frame()
         
             TIME +=T_STEP
 
 
+def eq_displacements(LLD_FILE, LEVELS, save_file):
+    # Read displacement data
+    disp_data = np.genfromtxt(LLD_FILE, dtype=[('lat','f8'),('lon','f8'), ('z','f8')],skip_header=3)
+
+    # Data ranges
+    lon_min,lon_max = disp_data['lon'].min(),disp_data['lon'].max()
+    lat_min,lat_max = disp_data['lat'].min(),disp_data['lat'].max()
+    mean_lat = 0.5*(lat_min + lat_max)
+    mean_lon = 0.5*(lon_min + lon_max)
+    lon_range = lon_max - lon_min
+    lat_range = lat_max - lat_min
+    z_min,z_max = disp_data['z'].min(),disp_data['z'].max()
+    z_lim = max(np.abs(z_min),np.abs(z_max))
+    cmap = plt.get_cmap('seismic')
+    norm = mcolor.Normalize(vmin=-z_lim, vmax=z_lim)
+    interp = 'none'
+    landcolor = '#FFFFCC'
+    framelabelfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=14)
+
+    # Initialize the frame and axes
+    fig = plt.figure()
+    
+    m = Basemap(projection='cyl',llcrnrlat=lat_min, urcrnrlat=lat_max,
+                llcrnrlon=lon_min, urcrnrlon=lon_max, lat_0=mean_lat, lon_0=mean_lon, resolution='h')
+    m.ax = fig.add_subplot(111)
+    
+    m.drawmeridians(np.linspace(lon_min,lon_max,num=5.0),labels=[0,0,0,1], linewidth=0)
+    m.drawparallels(np.linspace(lat_min,lat_max,num=5.0),labels=[1,0,0,0], linewidth=0)
+    m.drawcoastlines(linewidth=0.5)
+    #m.fillcontinents(color=landcolor, zorder=0)
+
+    # Colorbar
+    divider = make_axes_locatable(m.ax)
+    cbar_ax = divider.append_axes("right", size="5%",pad=0.05)
+    plt.figtext(0.96, 0.7, r'displacement $[m]$', rotation='vertical', fontproperties=framelabelfont)
+    cb = mcolorbar.ColorbarBase(cbar_ax, cmap=cmap, norm=norm)
+
+    # Reshape into matrices
+    Ncols = len(np.unique(disp_data['lon']))
+    Nrows = len(np.unique(disp_data['lat']))
+    
+    X = disp_data['lon'].reshape(Nrows, Ncols)
+    Y = disp_data['lat'].reshape(Nrows, Ncols)
+    Z = disp_data['z'].reshape(Nrows, Ncols)
+    
+    # Masked array via conditional, don't color the land unless it has water on it
+    zero_below = int(len(LEVELS)/2)-1
+    zero_above = zero_below+1
+    masked_data = np.ma.masked_where(np.logical_and(np.array(Z <= LEVELS[zero_above]),np.array(Z >= LEVELS[zero_below])), Z)
+    
+    # Set masked pixels to the land color
+    cmap.set_bad(landcolor, 0.0)  # set alpha=0.0 for transparent
+    
+    # Plot the contours
+    m.contourf(X, Y, Z, LEVELS, cmap=cmap, norm=norm, extend='both', zorder=1)
+
+    plt.savefig(save_file,dpi=100)
+    print("Saved to "+save_file)
+
+
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
-    # Load TsunamiSquares data
-    #sim_file = "accel_middle_bump_renormFractions_LxLy_900_dt20.txt"
     
-    MODE = "animate"
+    MODE = "field_eval"
     
     if MODE == "generate":
         # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
         ETOPO1_FILE = "ETOPO1_Bed_g_gmt4.grd"
-        SAVE_NAME = "local/Channel_Islands.txt"
-        MODEL     = "../Desktop/RUNNING/UCERF2/ALLCAL2_VQmeshed_3km.h5"
+        SAVE_NAME = "local/Channel_Islands_fullDispField.txt"
+        MODEL     = "../VQModels/UCERF2/ALLCAL2_VQmeshed_3km.h5"
         EVENTS    = "../Desktop/RUNNING/events_greensTrimmed_ALLCAL2_VQmeshed_3km_EQSim_StressDrops_4kyr_24June2015.h5"
         EVID      = 1157
         # Full range
@@ -197,24 +260,34 @@ if __name__ == "__main__":
         #MAX_LAT = 34.4
         #MIN_LON = -119.961
         #MAX_LON = -119.35
+        # =================================
+        # Larger subset
+        #MIN_LAT = 33.75
+        #MAX_LAT = 34.2
+        #MIN_LON = -120.2
+        #MAX_LON = -119.2
         # --- write grid ------
         lats,lons,bathy = read_ETOPO1.grab_ETOPO1_subset(ETOPO1_FILE,min_lat=MIN_LAT,max_lat=MAX_LAT,min_lon=MIN_LON,max_lon=MAX_LON)
         read_ETOPO1.write_grid(SAVE_NAME,lats,lons,bathy)
         # ---- compute field and write it ------
-        system("python ../vq/pyvq/pyvq/pyvq.py --event_file {} --model_file {} --event_id {} --lld_file {} --field_eval".format(EVENTS, MODEL, EVID, SAVE_NAME))
+        system("python ../vq/PyVQ/pyvq/pyvq.py --field_eval  --event_file {} --model_file {} --event_id {} --lld_file {} ".format(EVENTS, MODEL, EVID, SAVE_NAME))
     
     if MODE == "animate":
-        sim_file = "local/Channel_Islands_test.txt"
-        save_file = sim_file.split(".")[0]+".mp4"
+        sim_file = "local/Channel_Islands_1157disp_dt10_bathy_DryAccelCases_AltOut.txt"
+        save_file = sim_file.split(".")[0]+"_colorChop_noLines.mp4"
         sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('lat','f8'),('lon','f8'), ('z','f8'), ('alt','f8')])
-        FPS = 1
+        FPS = 3
         DPI = 100
         T_MAX,T_MIN = sim_data['time'].max(),sim_data['time'].min()
         T_STEP = np.unique(sim_data['time'])[1] - np.unique(sim_data['time'])[0]
         assert T_STEP > 0
         N_STEP = float(T_MAX-T_MIN)/T_STEP
         # Do it
-        make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP)
+        make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP, save_file)
+
+if MODE == "field_eval":
+        Levels = [-.3, -.2, -.1, -.05, .05, .1, .2, .3]
+        eq_displacements("local/Channel_Islands_fullDispField_dispField_event1157.txt",Levels, "disp_map.png")
 
 
 
