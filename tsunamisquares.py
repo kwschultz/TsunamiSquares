@@ -173,6 +173,7 @@ def make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP, save_fi
             TIME +=T_STEP
 
 
+# =============================================================
 def eq_displacements(LLD_FILE, LEVELS, save_file):
     # Read displacement data
     disp_data = np.genfromtxt(LLD_FILE, dtype=[('lat','f8'),('lon','f8'), ('z','f8')],skip_header=3)
@@ -188,7 +189,7 @@ def eq_displacements(LLD_FILE, LEVELS, save_file):
     z_lim = max(np.abs(z_min),np.abs(z_max))
     cmap = plt.get_cmap('seismic')
     norm = mcolor.Normalize(vmin=-z_lim, vmax=z_lim)
-    interp = 'none'
+    interp = 'cubic'
     landcolor = '#FFFFCC'
     framelabelfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=14)
 
@@ -202,7 +203,7 @@ def eq_displacements(LLD_FILE, LEVELS, save_file):
     m.drawmeridians(np.linspace(lon_min,lon_max,num=5.0),labels=[0,0,0,1], linewidth=0)
     m.drawparallels(np.linspace(lat_min,lat_max,num=5.0),labels=[1,0,0,0], linewidth=0)
     m.drawcoastlines(linewidth=0.5)
-    #m.fillcontinents(color=landcolor, zorder=0)
+    m.fillcontinents(color=landcolor, zorder=0)
 
     # Colorbar
     divider = make_axes_locatable(m.ax)
@@ -227,29 +228,82 @@ def eq_displacements(LLD_FILE, LEVELS, save_file):
     cmap.set_bad(landcolor, 0.0)  # set alpha=0.0 for transparent
     
     # Plot the contours
-    m.contourf(X, Y, Z, LEVELS, cmap=cmap, norm=norm, extend='both', zorder=1)
+    m.contourf(X, Y, masked_data, LEVELS, cmap=cmap, norm=norm, extend='both', zorder=1)
 
     plt.savefig(save_file,dpi=100)
     print("Saved to "+save_file)
 
+# =============================================================
+def bathy_topo_map(LLD_FILE, save_file):
+    # Read bathymetry/topography data
+    data = np.genfromtxt(LLD_FILE, dtype=[('lat','f8'),('lon','f8'), ('z','f8')],skip_header=3)
+
+    # Data ranges
+    lon_min,lon_max = data['lon'].min(),data['lon'].max()
+    lat_min,lat_max = data['lat'].min(),data['lat'].max()
+    mean_lat = 0.5*(lat_min + lat_max)
+    mean_lon = 0.5*(lon_min + lon_max)
+    lon_range = lon_max - lon_min
+    lat_range = lat_max - lat_min
+    z_min,z_max = data['z'].min(),data['z'].max()
+    z_lim = max(np.abs(z_min),np.abs(z_max))
+    cmap = plt.get_cmap('terrain')
+    norm = mcolor.Normalize(vmin=-z_lim, vmax=z_lim)
+    interp = 'none'
+    framelabelfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=14)
+
+    # Initialize the frame and axes
+    fig = plt.figure()
+    
+    m = Basemap(projection='cyl',llcrnrlat=lat_min, urcrnrlat=lat_max,
+                llcrnrlon=lon_min, urcrnrlon=lon_max, lat_0=mean_lat, lon_0=mean_lon, resolution='h')
+    m.ax = fig.add_subplot(111)
+    
+    m.drawmeridians(np.linspace(lon_min,lon_max,num=5.0),labels=[0,0,0,1], linewidth=0)
+    m.drawparallels(np.linspace(lat_min,lat_max,num=5.0),labels=[1,0,0,0], linewidth=0)
+    m.drawcoastlines(linewidth=0.5)
+
+    # Colorbar
+    divider = make_axes_locatable(m.ax)
+    cbar_ax = divider.append_axes("right", size="5%",pad=0.05)
+    plt.figtext(0.96, 0.7, r'elevation $[m]$', rotation='vertical', fontproperties=framelabelfont)
+    cb = mcolorbar.ColorbarBase(cbar_ax, cmap=cmap, norm=norm)
+
+    # Reshape into matrices
+    Ncols = len(np.unique(data['lon']))
+    Nrows = len(np.unique(data['lat']))
+    
+    X = data['lon'].reshape(Nrows, Ncols)
+    Y = data['lat'].reshape(Nrows, Ncols)
+    Z = data['z'].reshape(Nrows, Ncols)
+        
+    # Plot the contours
+    m.contourf(X, Y, Z, 100, cmap=cmap, norm=norm, extend='both', zorder=1)
+
+    plt.savefig(save_file,dpi=100)
+    print("Saved to "+save_file)
+    
+
+
+    
 
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
     
-    MODE = "animate"
+    MODE = "bathy"
     
     if MODE == "generate":
         # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
         ETOPO1_FILE = "ETOPO1_Bed_g_gmt4.grd"
-        SAVE_NAME = "local/Channel_Islands_fullDispField.txt"
+        SAVE_NAME = "local/Channel_Islands_largest_subset.txt"
         MODEL     = "../VQModels/UCERF2/ALLCAL2_VQmeshed_3km.h5"
         EVENTS    = "../Desktop/RUNNING/events_greensTrimmed_ALLCAL2_VQmeshed_3km_EQSim_StressDrops_4kyr_24June2015.h5"
         EVID      = 1157
         # Full range
-        MIN_LAT = 33.503
-        MAX_LAT = 34.519
-        MIN_LON = -120.518
-        MAX_LON = -118.883
+        #MIN_LAT = 33.503
+        #MAX_LAT = 34.519
+        #MIN_LON = -120.518
+        #MAX_LON = -118.883
         # Inner subset
         #MIN_LAT = 33.874
         #MAX_LAT = 34.137
@@ -262,10 +316,10 @@ if __name__ == "__main__":
         #MAX_LON = -119.35
         # =================================
         # Larger subset
-        #MIN_LAT = 33.75
-        #MAX_LAT = 34.2
-        #MIN_LON = -120.2
-        #MAX_LON = -119.2
+        MIN_LAT = 33.75
+        MAX_LAT = 34.3
+        MIN_LON = -120.2
+        MAX_LON = -119.2
         # --- write grid ------
         lats,lons,bathy = read_ETOPO1.grab_ETOPO1_subset(ETOPO1_FILE,min_lat=MIN_LAT,max_lat=MAX_LAT,min_lon=MIN_LON,max_lon=MAX_LON)
         read_ETOPO1.write_grid(SAVE_NAME,lats,lons,bathy)
@@ -286,9 +340,14 @@ if __name__ == "__main__":
         #make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP, save_file)
         make_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP)
 
-if MODE == "field_eval":
-        Levels = [-.3, -.2, -.1, -.05, .05, .1, .2, .3]
-        eq_displacements("local/Channel_Islands_fullDispField_dispField_event1157.txt",Levels, "disp_map.png")
+    if MODE == "field_eval":
+        Levels = [-.3, -.2, -.1, -.05, -.008, .008, .05, .1, .2, .3]
+        eq_displacements("local/Channel_Islands_dispField_event1157.txt",Levels, "disp_map.png")
+        
+    if MODE == "bathy":
+        #Levels = [-3, -.2, -.1, -.05, -.008, .008, .05, .1, .2, .3]
+        #bathy_topo_map("local/Channel_Islands.txt",Levels, "bathy_map.png")
+        bathy_topo_map("local/Channel_Islands.txt", "bathy_map.png")
 
 
 
