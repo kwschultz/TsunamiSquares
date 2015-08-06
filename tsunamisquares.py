@@ -245,12 +245,26 @@ def bathy_topo_map(LLD_FILE, save_file):
     mean_lon = 0.5*(lon_min + lon_max)
     lon_range = lon_max - lon_min
     lat_range = lat_max - lat_min
-    z_min,z_max = data['z'].min(),data['z'].max()
-    z_lim = max(np.abs(z_min),np.abs(z_max))
     cmap = plt.get_cmap('terrain')
-    norm = mcolor.Normalize(vmin=-z_lim, vmax=z_lim)
     interp = 'none'
     framelabelfont = mfont.FontProperties(family='Arial', style='normal', variant='normal', size=14)
+    
+    # Reshape into matrices
+    Ncols = len(np.unique(data['lon']))
+    Nrows = len(np.unique(data['lat']))
+    
+    X = data['lon'].reshape(Nrows, Ncols)
+    Y = data['lat'].reshape(Nrows, Ncols)
+    Z = data['z'].reshape(Nrows, Ncols)
+        
+    # catch any nan values
+    masked_data = np.ma.masked_invalid(Z)
+    cmap.set_bad('red')
+    
+    # Color limits
+    z_min,z_max = masked_data.min(),masked_data.max()
+    z_lim = max(np.abs(z_min),np.abs(z_max))
+    norm = mcolor.Normalize(vmin=-z_lim, vmax=z_lim)
 
     # Initialize the frame and axes
     fig = plt.figure()
@@ -267,30 +281,20 @@ def bathy_topo_map(LLD_FILE, save_file):
     divider = make_axes_locatable(m.ax)
     cbar_ax = divider.append_axes("right", size="5%",pad=0.05)
     plt.figtext(0.96, 0.7, r'elevation $[m]$', rotation='vertical', fontproperties=framelabelfont)
-    cb = mcolorbar.ColorbarBase(cbar_ax, cmap=cmap, norm=norm)
-
-    # Reshape into matrices
-    Ncols = len(np.unique(data['lon']))
-    Nrows = len(np.unique(data['lat']))
-    
-    X = data['lon'].reshape(Nrows, Ncols)
-    Y = data['lat'].reshape(Nrows, Ncols)
-    Z = data['z'].reshape(Nrows, Ncols)
+    cb = mcolorbar.ColorbarBase(cbar_ax, cmap=cmap, norm=norm)    
         
     # Plot the contours
-    m.contourf(X, Y, Z, 100, cmap=cmap, norm=norm, extend='both', zorder=1)
+    #m.contourf(X, Y, masked_data, 100, cmap=cmap, norm=norm, extend='both', zorder=1)
+    m.ax.imshow(masked_data,cmap=cmap,origin='lower',norm=norm,extent=[lon_min,lon_max,lat_max,lat_min],interpolation=interp)
 
     plt.savefig(save_file,dpi=100)
     print("Saved to "+save_file)
     
 
-
-    
-
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
     
-    MODE = "bathy"
+    MODE = "interp"
     
     if MODE == "generate":
         # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
@@ -347,7 +351,41 @@ if __name__ == "__main__":
     if MODE == "bathy":
         #Levels = [-3, -.2, -.1, -.05, -.008, .008, .05, .1, .2, .3]
         #bathy_topo_map("local/Channel_Islands.txt",Levels, "bathy_map.png")
-        bathy_topo_map("local/Channel_Islands.txt", "bathy_map.png")
+        bathy_topo_map("local/Channel_Islands_interp.txt", "bathy_map_interp_imshow.png")
+        
+    if MODE == "interp":
+        # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
+        ETOPO1_FILE = "ETOPO1_Bed_g_gmt4.grd"
+        SAVE_NAME = "local/Channel_Islands_interp.txt"
+        MODEL     = "../VQModels/UCERF2/ALLCAL2_VQmeshed_3km.h5"
+        EVENTS    = "../Desktop/RUNNING/events_greensTrimmed_ALLCAL2_VQmeshed_3km_EQSim_StressDrops_4kyr_24June2015.h5"
+        EVID      = 1157
+        # Full range
+        MIN_LAT = 33.503
+        MAX_LAT = 34.519
+        MIN_LON = -120.518
+        MAX_LON = -118.883
+        # Inner subset
+        #MIN_LAT = 33.874
+        #MAX_LAT = 34.137
+        #MIN_LON = -119.961
+        #MAX_LON = -119.35
+        # Larger inner subset for tests
+        #MIN_LAT = 33.874
+        #MAX_LAT = 34.4
+        #MIN_LON = -119.961
+        #MAX_LON = -119.35
+        # =================================
+        # Larger subset
+        #MIN_LAT = 33.75
+        #MAX_LAT = 34.3
+        #MIN_LON = -120.2
+        #MAX_LON = -119.2
+        # --- write grid ------
+        lats,lons,bathy = read_ETOPO1.grab_ETOPO1_subset_interpolated(ETOPO1_FILE,min_lat=MIN_LAT,max_lat=MAX_LAT,min_lon=MIN_LON,max_lon=MAX_LON)
+        read_ETOPO1.write_grid(SAVE_NAME,lats,lons,bathy)
+        # ---- compute field and write it ------
+        #system("python ../vq/PyVQ/pyvq/pyvq.py --field_eval  --event_file {} --model_file {} --event_id {} --lld_file {} ".format(EVENTS, MODEL, EVID, SAVE_NAME))
 
 
 
