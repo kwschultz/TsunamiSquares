@@ -28,8 +28,8 @@ int main (int argc, char **argv) {
     tsunamisquares::SquareIDSet                 ids;
     std::ofstream                               out_file;
     clock_t                                     start,end;
-    const std::string       out_file_name = "local/Pacific_7200_central_upDown_line_D100k.txt";
-    const std::string       bathy_file = "local/Pacific_7200.txt";
+    const std::string       out_file_name = "local/Channel_Islands_interp_larger_EQ_sample_bathy.txt";
+    const std::string       bathy_file = "local/Channel_Islands_interp_larger.txt";
     const std::string       kml_file = "local/Pacific_900.kml";
     // Diffusion constant (fit to a reasonable looking sim)
     double D = 100000.0; //140616.45;
@@ -49,9 +49,9 @@ int main (int argc, char **argv) {
     double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds
 
     // Flatten the bathymetry
-    double new_depth = -100.0;
-    std::cout << "Flattening the bottom...";
-    this_world.flattenBottom(new_depth);
+//    double new_depth = -100.0;
+//    std::cout << "Flattening the bottom...";
+//    this_world.flattenBottom(new_depth);
     
     
     // Creating up sloping beach over the bottom 5 rows
@@ -86,23 +86,23 @@ int main (int argc, char **argv) {
 //    }
     
     // Initial conditions
-    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
-    tsunamisquares::UIndex bot_left  = bot_right-1;
-    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
-    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
-////    // TODO: Save num_lons and num_lats in the world object
-//    std::cout << "Deforming the bottom... " << std::endl;
-    this_world.deformBottom(bot_left,100.0);
-    this_world.deformBottom(top_left,100.0);
-    this_world.deformBottom(top_right,100.0);
-    this_world.deformBottom(bot_right,100.0);
-    
-    // Smooth the initial bump
-    this_world.diffuseSquares(dt);
-    this_world.diffuseSquares(dt);
+//    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
+//    tsunamisquares::UIndex bot_left  = bot_right-1;
+//    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
+//    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
+//////    // TODO: Save num_lons and num_lats in the world object
+////    std::cout << "Deforming the bottom... " << std::endl;
+//    this_world.deformBottom(bot_left,100.0);
+//    this_world.deformBottom(top_left,100.0);
+//    this_world.deformBottom(top_right,100.0);
+//    this_world.deformBottom(bot_right,100.0);
+//    
+//    // Smooth the initial bump
+//    this_world.diffuseSquares(dt);
+//    this_world.diffuseSquares(dt);
     
     // DEFORM VIA FILE
-    //this_world.deformFromFile("local/Channel_Islands_subset_dispField_event1157.txt");
+    this_world.deformFromFile("local/Channel_Islands_interp_larger_subset_dispField_event1157.txt");
     
 //    ids = this_world.getSquareIDs();
 //    
@@ -111,7 +111,7 @@ int main (int argc, char **argv) {
 //    }
 
     // -------- Prepare a run to write to file ----------------------               
-    int N_steps = 40; //number of time steps
+    int N_steps = 100; //number of time steps
     int current_step = 0;
     int update_step = 1;
     int save_step = 1;

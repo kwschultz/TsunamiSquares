@@ -57,6 +57,7 @@ def grab_ETOPO1_subset_interpolated(file_name, min_lat, max_lat, min_lon, max_lo
     lats = ETOPO1.variables["y"][:]
 
     # Extend the bounds to add a buffer, ensures that interpolation has enough data on the boundaries
+    # TODO: better algorithm here, the min/max position of 0.98 vs 1.02 changes in different regions
     min_lat_buff = min_lat*0.98
     max_lat_buff = max_lat*1.02
     min_lon_buff = min_lon*1.02

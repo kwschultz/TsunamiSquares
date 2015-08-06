@@ -174,7 +174,7 @@ def make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP, save_fi
 
 
 # =============================================================
-def eq_displacements(LLD_FILE, LEVELS, save_file):
+def plot_eq_displacements(LLD_FILE, LEVELS, save_file):
     # Read displacement data
     disp_data = np.genfromtxt(LLD_FILE, dtype=[('lat','f8'),('lon','f8'), ('z','f8')],skip_header=3)
 
@@ -294,7 +294,7 @@ def bathy_topo_map(LLD_FILE, save_file):
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
     
-    MODE = "interp"
+    MODE = "eq_field_eval"
     
     if MODE == "generate":
         # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
@@ -308,16 +308,6 @@ if __name__ == "__main__":
         #MAX_LAT = 34.519
         #MIN_LON = -120.518
         #MAX_LON = -118.883
-        # Inner subset
-        #MIN_LAT = 33.874
-        #MAX_LAT = 34.137
-        #MIN_LON = -119.961
-        #MAX_LON = -119.35
-        # Larger inner subset for tests
-        #MIN_LAT = 33.874
-        #MAX_LAT = 34.4
-        #MIN_LON = -119.961
-        #MAX_LON = -119.35
         # =================================
         # Larger subset
         MIN_LAT = 33.75
@@ -344,51 +334,47 @@ if __name__ == "__main__":
         #make_map_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP, save_file)
         make_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP)
 
-    if MODE == "field_eval":
+    if MODE == "eq_field_plot":
         Levels = [-.3, -.2, -.1, -.05, -.008, .008, .05, .1, .2, .3]
-        eq_displacements("local/Channel_Islands_dispField_event1157.txt",Levels, "disp_map.png")
+        plot_eq_displacements("local/Channel_Islands_dispField_event1157.txt",Levels, "disp_map.png")
         
     if MODE == "bathy":
         #Levels = [-3, -.2, -.1, -.05, -.008, .008, .05, .1, .2, .3]
         #bathy_topo_map("local/Channel_Islands.txt",Levels, "bathy_map.png")
-        bathy_topo_map("local/Channel_Islands_interp.txt", "bathy_map_interp_imshow.png")
+        bathy_topo_map("local/Channel_Islands_interp_larger.txt", "bathy_map_interp_larger_imshow.png")
         
     if MODE == "interp":
         # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
         ETOPO1_FILE = "ETOPO1_Bed_g_gmt4.grd"
-        SAVE_NAME = "local/Channel_Islands_interp.txt"
+        SAVE_NAME = "local/Channel_Islands_interp_larger_subset.txt"
         MODEL     = "../VQModels/UCERF2/ALLCAL2_VQmeshed_3km.h5"
         EVENTS    = "../Desktop/RUNNING/events_greensTrimmed_ALLCAL2_VQmeshed_3km_EQSim_StressDrops_4kyr_24June2015.h5"
         EVID      = 1157
         # Full range
-        MIN_LAT = 33.503
-        MAX_LAT = 34.519
-        MIN_LON = -120.518
-        MAX_LON = -118.883
-        # Inner subset
-        #MIN_LAT = 33.874
-        #MAX_LAT = 34.137
-        #MIN_LON = -119.961
-        #MAX_LON = -119.35
-        # Larger inner subset for tests
-        #MIN_LAT = 33.874
-        #MAX_LAT = 34.4
-        #MIN_LON = -119.961
-        #MAX_LON = -119.35
+        #MIN_LAT = 33.4
+        #MAX_LAT = 34.6
+        #MIN_LON = -120.6
+        #MAX_LON = -118.8
         # =================================
-        # Larger subset
-        #MIN_LAT = 33.75
-        #MAX_LAT = 34.3
-        #MIN_LON = -120.2
-        #MAX_LON = -119.2
+        # Larger subset for EQ sampling
+        MIN_LAT = 33.75
+        MAX_LAT = 34.3
+        MIN_LON = -120.2
+        MAX_LON = -119.2
         # --- write grid ------
         lats,lons,bathy = read_ETOPO1.grab_ETOPO1_subset_interpolated(ETOPO1_FILE,min_lat=MIN_LAT,max_lat=MAX_LAT,min_lon=MIN_LON,max_lon=MAX_LON)
         read_ETOPO1.write_grid(SAVE_NAME,lats,lons,bathy)
         # ---- compute field and write it ------
-        #system("python ../vq/PyVQ/pyvq/pyvq.py --field_eval  --event_file {} --model_file {} --event_id {} --lld_file {} ".format(EVENTS, MODEL, EVID, SAVE_NAME))
+        system("python ../vq/PyVQ/pyvq/pyvq.py --field_eval  --event_file {} --model_file {} --event_id {} --lld_file {} ".format(EVENTS, MODEL, EVID, SAVE_NAME))
 
 
-
+if MODE == "eq_field_eval":
+        LLD_NAME = "local/Channel_Islands_interp_larger_subset.txt"
+        MODEL     = "../VQModels/UCERF2/ALLCAL2_VQmeshed_3km.h5"
+        EVENTS    = "../Desktop/RUNNING/events_greensTrimmed_ALLCAL2_VQmeshed_3km_EQSim_StressDrops_4kyr_24June2015.h5"
+        EVID      = 1157
+        # ---- compute field and write it ------
+        system("python ../vq/PyVQ/pyvq/pyvq.py --field_eval  --event_file {} --model_file {} --event_id {} --lld_file {} ".format(EVENTS, MODEL, EVID, LLD_NAME))
 
 
 
