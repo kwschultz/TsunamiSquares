@@ -28,28 +28,56 @@ int main (int argc, char **argv) {
     tsunamisquares::SquareIDSet                 ids;
     std::ofstream                               out_file;
     clock_t                                     start,end;
-    const std::string       out_file_name = "local/Channel_Islands_interp_larger_EQ_sample_flatBottom.txt";
-    const std::string       bathy_file = "local/Channel_Islands_interp_larger.txt";
-    const std::string       kml_file = "local/Pacific_900.kml";
-    // Diffusion constant (fit to a reasonable looking sim)
-    double D = 50000.0; //140616.45;
-    // Start the clock
-    start = clock();
     
+    
+    // -------------------------------------------------------------------------------- //
+    ///////////          CONSTANTS (to be moved to sim parameter file)        ////////////    
+    // -------------------------------------------------------------------------------- //
+    const std::string       out_file_name    = "local/Channel_Islands_bump_flatBottom.txt";
+    const std::string       bathy_file       = "local/Channel_Islands.txt";
+    //const std::string       kml_file         = "local/Pacific_900.kml";
+    const std::string       deformation_file = "local/Channel_Islands_interp_larger_subset_dispField_event1157.txt";
+    const std::string       header           = "# time \t lon \t\t lat \t\t water height \t altitude \n";
+    
+    // Diffusion constant (fit to a reasonable looking sim)
+    double D = 140616.45; //140616.45;
+    // Flattening the bathymetry to a constant depth (negative for below sea level)
+    double new_depth = -100.0;
+    // Number of times to move squares
+    int N_steps = 100; //number of time steps
+    // Updating intervals, etc.
+    int current_step = 0;
+    int update_step = 1;
+    int save_step = 1;
+    double time = 0.0;
+    int output_num_digits_for_percent = 3;
+    
+    
+    
+    // -------------------------------------------------------------------------------- //
+    ///////                Simulation Initialization and Loading                   ///////
+    // --------------------------------------------------------------------------------//
+    start = clock();
     // Read in the bathymetry data
     this_world.clear();
     std::cout << std::endl << "Reading..."   << bathy_file.c_str() << std::endl;
     this_world.read_bathymetry(bathy_file.c_str());
+    
+    // Gather model information
     this_world.info();
+    int num_lats = (int) sqrt(this_world.num_squares());
+    int num_lons = num_lats;
     ids = this_world.getSquareIDs();
-    std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
+    double max_time = N_steps*dt;
+
+    // Write KML model
+    //std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
     //this_world.write_file_kml(kml_file.c_str());
     
     // Compute the time step given the diffusion constant D
     double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds
 
-    // Flatten the bathymetry
-    double new_depth = -100.0;
+    // Flatten the bottom for simple simulation test cases, do not do this for tsunami simulations
     std::cout << "Flattening the bottom...";
     this_world.flattenBottom(new_depth);
     
@@ -57,24 +85,42 @@ int main (int argc, char **argv) {
     std::cout << "Filling with water..." << std::flush;
     this_world.fillToSeaLevel();
     
-    // DEFORM VIA FILE
-    this_world.deformFromFile("local/Channel_Islands_interp_larger_subset_dispField_event1157.txt");
-
-    // -------- Prepare a run to write to file ----------------------               
-    int N_steps = 100; //number of time steps
-    int current_step = 0;
-    int update_step = 1;
-    int save_step = 1;
-    double max_time = N_steps*dt;
-    double time = 0.0;
-    ids = this_world.getSquareIDs();
-
     
-    // Open the output file
+
+    // --------------------------------------------------------------------------------//
+    //            Sea Floor Deformation and Initial Conditions                         //
+    // --------------------------------------------------------------------------------//
+    std::cout << "Deforming the bottom... " << std::endl;
+    
+    // DEFORM VIA FILE
+    //this_world.deformFromFile(deformation_file.c_str());
+
+    // Initial conditions
+    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
+    tsunamisquares::UIndex bot_left  = bot_right-1;
+    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
+    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
+    ////    // TODO: Save num_lons and num_lats in the world object
+    this_world.deformBottom(bot_left,100.0);
+    this_world.deformBottom(top_left,100.0);
+    this_world.deformBottom(top_right,100.0);
+    this_world.deformBottom(bot_right,100.0);
+
+
+
+    // --------------------------------------------------------------------------------//
+    // --==                         File I/O Preparation                          --== //   
+    // --------------------------------------------------------------------------------//            
     out_file.open(out_file_name.c_str());
     // Write the header
-    out_file << "# time \t lon \t\t lat \t\t water height \t altitude \n";
-    std::cout.precision(3);
+    out_file << header.c_str();
+    std::cout.precision(output_num_digits_for_percent);
+    
+    
+    
+    // --------------------------------------------------------------------------------//
+    // --========-           Begin the Simulation; Move the Squares          ----====- //          
+    // --------------------------------------------------------------------------------//    
     std::cout << "Moving squares....time_step=" <<dt << "...";
     while (time < max_time) {
         // If this is a writing step, print status
@@ -96,14 +142,20 @@ int main (int argc, char **argv) {
         current_step += 1;
     }
     out_file.close();
+    
+    
+    // --------------------------------------------------------------------------------//
+    // --========---                    Wrap up and Reporting            ---=======--- //
+    // --------------------------------------------------------------------------------//        
     std::cout << std::endl << "Results written to " << out_file_name << std::endl;
     end = clock();
-    std::cout.precision(5);
+    std::cout.precision(2+output_num_digits_for_percent);
     std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
     return 0;
 }
 
 
+//////////// Chalkboard ////////////////
 
 // Grab all squares and print
 //    ids = this_world.getSquareIDs();
@@ -114,8 +166,6 @@ int main (int argc, char **argv) {
 
 
     // Creating up sloping beach over the bottom 5 rows
-//    int num_lats = (int) sqrt(this_world.num_squares());
-//    int num_lons = num_lats;
 //    assertThrow(num_lats == num_lons, "lats and lons mismatch");
 //    
 //    for (unsigned int i=0; i< (int) this_world.num_squares(); ++i) {
