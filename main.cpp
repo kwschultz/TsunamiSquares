@@ -28,11 +28,11 @@ int main (int argc, char **argv) {
     tsunamisquares::SquareIDSet                 ids;
     std::ofstream                               out_file;
     clock_t                                     start,end;
-    const std::string       out_file_name = "local/Channel_Islands_interp_larger_EQ_sample_bathy.txt";
+    const std::string       out_file_name = "local/Channel_Islands_interp_larger_EQ_sample_flatBottom.txt";
     const std::string       bathy_file = "local/Channel_Islands_interp_larger.txt";
     const std::string       kml_file = "local/Pacific_900.kml";
     // Diffusion constant (fit to a reasonable looking sim)
-    double D = 100000.0; //140616.45;
+    double D = 50000.0; //140616.45;
     // Start the clock
     start = clock();
     
@@ -49,66 +49,16 @@ int main (int argc, char **argv) {
     double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds
 
     // Flatten the bathymetry
-//    double new_depth = -100.0;
-//    std::cout << "Flattening the bottom...";
-//    this_world.flattenBottom(new_depth);
-    
-    
-    // Creating up sloping beach over the bottom 5 rows
-//    int num_lats = (int) sqrt(this_world.num_squares());
-//    int num_lons = num_lats;
-//    assertThrow(num_lats == num_lons, "lats and lons mismatch");
-//    
-//    for (unsigned int i=0; i< (int) this_world.num_squares(); ++i) {
-//        int row = (int)(i/num_lons);
-//        if (row == num_lats-5) this_world.deformBottom(i, 50);
-//        if (row == num_lats-4) this_world.deformBottom(i, 75);
-//        if (row == num_lats-3) this_world.deformBottom(i, 90);
-//        if (row == num_lats-2) this_world.deformBottom(i, 101);
-//        if (row == num_lats-1) this_world.deformBottom(i, 110);
-//        
-//    }
+    double new_depth = -100.0;
+    std::cout << "Flattening the bottom...";
+    this_world.flattenBottom(new_depth);
     
     // Put water into squares to bring water level up to sealevel.
     std::cout << "Filling with water..." << std::flush;
     this_world.fillToSeaLevel();
     
-    
-//    for (unsigned int i=0; i< (int) this_world.num_squares(); ++i) {
-//        // Create a wave coming from the top down, first row
-//        int row = (int)(i/num_lons);
-//        int col = (int)(i%num_lons);
-//        if (row== num_lats-8 && col > 9 && col < num_lons-10) {
-//            // Wave is 1m hi
-//            this_world.deformBottom(i, 10);
-//            //this_world.setSquareVelocity(i, tsunamisquares::Vec<2>(0.0, -this_world.square(0).Ly()/100));
-//        }
-//    }
-    
-    // Initial conditions
-//    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
-//    tsunamisquares::UIndex bot_left  = bot_right-1;
-//    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
-//    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
-//////    // TODO: Save num_lons and num_lats in the world object
-////    std::cout << "Deforming the bottom... " << std::endl;
-//    this_world.deformBottom(bot_left,100.0);
-//    this_world.deformBottom(top_left,100.0);
-//    this_world.deformBottom(top_right,100.0);
-//    this_world.deformBottom(bot_right,100.0);
-//    
-//    // Smooth the initial bump
-//    this_world.diffuseSquares(dt);
-//    this_world.diffuseSquares(dt);
-    
     // DEFORM VIA FILE
     this_world.deformFromFile("local/Channel_Islands_interp_larger_subset_dispField_event1157.txt");
-    
-//    ids = this_world.getSquareIDs();
-//    
-//    for (it=ids.begin(); it!=ids.end(); ++it) {
-//        this_world.printSquare(*it);
-//    }
 
     // -------- Prepare a run to write to file ----------------------               
     int N_steps = 100; //number of time steps
@@ -152,4 +102,58 @@ int main (int argc, char **argv) {
     std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
     return 0;
 }
+
+
+
+// Grab all squares and print
+//    ids = this_world.getSquareIDs();
+//    
+//    for (it=ids.begin(); it!=ids.end(); ++it) {
+//        this_world.printSquare(*it);
+//    }
+
+
+    // Creating up sloping beach over the bottom 5 rows
+//    int num_lats = (int) sqrt(this_world.num_squares());
+//    int num_lons = num_lats;
+//    assertThrow(num_lats == num_lons, "lats and lons mismatch");
+//    
+//    for (unsigned int i=0; i< (int) this_world.num_squares(); ++i) {
+//        int row = (int)(i/num_lons);
+//        if (row == num_lats-5) this_world.deformBottom(i, 50);
+//        if (row == num_lats-4) this_world.deformBottom(i, 75);
+//        if (row == num_lats-3) this_world.deformBottom(i, 90);
+//        if (row == num_lats-2) this_world.deformBottom(i, 101);
+//        if (row == num_lats-1) this_world.deformBottom(i, 110);
+//        
+//    }
+
+    
+//    for (unsigned int i=0; i< (int) this_world.num_squares(); ++i) {
+//        // Create a wave coming from the top down, first row
+//        int row = (int)(i/num_lons);
+//        int col = (int)(i%num_lons);
+//        if (row== num_lats-8 && col > 9 && col < num_lons-10) {
+//            // Wave is 1m hi
+//            this_world.deformBottom(i, 10);
+//            //this_world.setSquareVelocity(i, tsunamisquares::Vec<2>(0.0, -this_world.square(0).Ly()/100));
+//        }
+//    }
+    
+    // Initial conditions
+//    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
+//    tsunamisquares::UIndex bot_left  = bot_right-1;
+//    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
+//    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
+//////    // TODO: Save num_lons and num_lats in the world object
+////    std::cout << "Deforming the bottom... " << std::endl;
+//    this_world.deformBottom(bot_left,100.0);
+//    this_world.deformBottom(top_left,100.0);
+//    this_world.deformBottom(top_right,100.0);
+//    this_world.deformBottom(bot_right,100.0);
+//    
+//    // Smooth the initial bump
+//    this_world.diffuseSquares(dt);
+//    this_world.diffuseSquares(dt);
+
 
