@@ -16,6 +16,18 @@ import quakelib
 from os import system
 import read_ETOPO1
 
+"""
+Tsunami Squares output files are in the following columns:
+
+TIME (secs) |  LON (dec. degrees)  |  LAT (dec. deg.)  |  WATER HEIGHT (meters)  |  BATHY. DEPTH (meters)
+  
+In the code below: X = LON, Y = LAT, Z = WATER HEIGHT, ALT = BATHYMETRY DEPTH
+
+Water height and bathymetry depth are given in units of meters relative to global mean sea level.
+If a square sits on a beach at 5m above sea level and has 4m of water on it, then Z=9m and ALT=5m.
+
+"""
+
 
 # --------------------------------------------------------------------------------
 def make_animation(sim_data, FPS, DPI, T_MIN, T_MAX, T_STEP, N_STEP):
@@ -294,7 +306,7 @@ def bathy_topo_map(LLD_FILE, save_file):
 # --------------------------------------------------------------------------------
 if __name__ == "__main__":
     
-    MODE = "eq_field_eval"
+    MODE = "animate"
     
     if MODE == "generate":
         # ====== PARSE ETOPO1 FILE, SAVE SUBSET, EVALUATE EVENT FIELD AT THE LAT/LON, SAVE =====
@@ -321,7 +333,7 @@ if __name__ == "__main__":
         system("python ../vq/PyVQ/pyvq/pyvq.py --field_eval  --event_file {} --model_file {} --event_id {} --lld_file {} ".format(EVENTS, MODEL, EVID, SAVE_NAME))
     
     if MODE == "animate":
-        sim_file = "local/Pacific_7200_central_upDown_line_D100k.txt"
+        sim_file = "local/Channel_Islands_interp_larger_EQ_sample_flatBottom.txt"
         save_file = sim_file.split(".")[0]+"_colorChop_noLines.mp4"
         sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('lat','f8'),('lon','f8'), ('z','f8'), ('alt','f8')])
         FPS = 10
