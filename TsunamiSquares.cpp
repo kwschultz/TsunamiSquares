@@ -770,6 +770,8 @@ int tsunamisquares::World::read_bathymetry(const std::string &file_name) {
     std::stringstream desc_line(next_line(in_file));
     desc_line >> num_lats;
     desc_line >> num_lons;
+    _num_latitudes = num_lats;
+    _num_longitudes = num_lons;
     
     // Set the number of vertices and squares
     num_vertices = num_lats*num_lons;

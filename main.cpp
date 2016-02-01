@@ -76,85 +76,87 @@ int main (int argc, char **argv) {
     ids = this_world.getSquareIDs();
     double max_time = N_steps*dt;
 
-    // Write KML model
-    //std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
-    //this_world.write_file_kml(kml_file.c_str());
+    std::cout << "Num lons: " << this_world.num_lons() << "   Num lats: " << this_world.num_lats() << std::endl;
 
-    // Flatten the bottom for simple simulation test cases, do not do this for tsunami simulations
-    std::cout << "Flattening the bottom...";
-    this_world.flattenBottom(new_depth);
-    
-    // Put water into squares to bring water level up to sealevel.
-    std::cout << "Filling with water..." << std::flush;
-    this_world.fillToSeaLevel();
-    
-    
-
-    // --------------------------------------------------------------------------------//
-    //            Sea Floor Deformation and Initial Conditions                         //
-    // --------------------------------------------------------------------------------//
-    std::cout << "Deforming the bottom... " << std::endl;
-    
-    //     ==  DEFORM VIA FILE        ======
-    //this_world.deformFromFile(deformation_file.c_str());
-
-    //     ==  DEFORM VIA CENTER BUMP ======
-    // Find the 4 center squares and bump them by a constant height upward
-    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
-    tsunamisquares::UIndex bot_left  = bot_right-1;
-    tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
-    tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
-    this_world.deformBottom(bot_left,  bump_height);
-    this_world.deformBottom(top_left,  bump_height);
-    this_world.deformBottom(top_right, bump_height);
-    this_world.deformBottom(bot_right, bump_height);
-    ////    // TODO: Save num_lons and num_lats in the world object
-
-
-
-    // --------------------------------------------------------------------------------//
-    // --==                         File I/O Preparation                          --== //   
-    // --------------------------------------------------------------------------------//            
-    out_file.open(out_file_name.c_str());
-    out_file << header.c_str();
-    std::cout.precision(output_num_digits_for_percent);
-    
-    
-    
-    // --------------------------------------------------------------------------------//
-    // --========-           Begin the Simulation; Move the Squares          ----====- //          
-    // --------------------------------------------------------------------------------//    
-    std::cout << "Moving squares....time_step=" <<dt << "...";
-    while (time < max_time) {
-        // If this is a writing step, print status
-        if (current_step%update_step == 0) {
-            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
-            std::cout << std::flush;
-        }
-    
-        // Write the current state to file
-        if (current_step%save_step == 0) {
-            for (it=ids.begin(); it!=ids.end(); ++it) {
-                this_world.write_square_ascii(out_file, time, *it);
-            }
-        }
-        // Move the squares
-        this_world.moveSquares(dt);
-        this_world.diffuseSquares(dt);
-        time += dt;
-        current_step += 1;
-    }
-    out_file.close();
-    
-    
-    // --------------------------------------------------------------------------------//
-    // --========---                    Wrap up and Reporting            ---=======--- //
-    // --------------------------------------------------------------------------------//        
-    std::cout << std::endl << "Results written to " << out_file_name << std::endl;
-    end = clock();
-    std::cout.precision(2+output_num_digits_for_percent);
-    std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
-    return 0;
+//    // Write KML model
+//    //std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
+//    //this_world.write_file_kml(kml_file.c_str());
+//
+//    // Flatten the bottom for simple simulation test cases, do not do this for tsunami simulations
+//    std::cout << "Flattening the bottom...";
+//    this_world.flattenBottom(new_depth);
+//    
+//    // Put water into squares to bring water level up to sealevel.
+//    std::cout << "Filling with water..." << std::flush;
+//    this_world.fillToSeaLevel();
+//    
+//    
+//
+//    // --------------------------------------------------------------------------------//
+//    //            Sea Floor Deformation and Initial Conditions                         //
+//    // --------------------------------------------------------------------------------//
+//    std::cout << "Deforming the bottom... " << std::endl;
+//    
+//    //     ==  DEFORM VIA FILE        ======
+//    //this_world.deformFromFile(deformation_file.c_str());
+//
+//    //     ==  DEFORM VIA CENTER BUMP ======
+//    // Find the 4 center squares and bump them by a constant height upward
+//    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5);
+//    tsunamisquares::UIndex bot_left  = bot_right-1;
+//    tsunamisquares::UIndex top_left  = bot_left-this_world.num_lons();
+//    tsunamisquares::UIndex top_right = top_left+1;
+//    this_world.deformBottom(bot_left,  bump_height);
+//    this_world.deformBottom(top_left,  bump_height);
+//    this_world.deformBottom(top_right, bump_height);
+//    this_world.deformBottom(bot_right, bump_height);
+//    ////    // TODO: Save num_lons and num_lats in the world object
+//
+//
+//
+//    // --------------------------------------------------------------------------------//
+//    // --==                         File I/O Preparation                          --== //   
+//    // --------------------------------------------------------------------------------//            
+//    out_file.open(out_file_name.c_str());
+//    out_file << header.c_str();
+//    std::cout.precision(output_num_digits_for_percent);
+//    
+//    
+//    
+//    // --------------------------------------------------------------------------------//
+//    // --========-           Begin the Simulation; Move the Squares          ----====- //          
+//    // --------------------------------------------------------------------------------//    
+//    std::cout << "Moving squares....time_step=" <<dt << "...";
+//    while (time < max_time) {
+//        // If this is a writing step, print status
+//        if (current_step%update_step == 0) {
+//            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
+//            std::cout << std::flush;
+//        }
+//    
+//        // Write the current state to file
+//        if (current_step%save_step == 0) {
+//            for (it=ids.begin(); it!=ids.end(); ++it) {
+//                this_world.write_square_ascii(out_file, time, *it);
+//            }
+//        }
+//        // Move the squares
+//        this_world.moveSquares(dt);
+//        this_world.diffuseSquares(dt);
+//        time += dt;
+//        current_step += 1;
+//    }
+//    out_file.close();
+//    
+//    
+//    // --------------------------------------------------------------------------------//
+//    // --========---                    Wrap up and Reporting            ---=======--- //
+//    // --------------------------------------------------------------------------------//        
+//    std::cout << std::endl << "Results written to " << out_file_name << std::endl;
+//    end = clock();
+//    std::cout.precision(2+output_num_digits_for_percent);
+//    std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
+//    return 0;
 }
 
 

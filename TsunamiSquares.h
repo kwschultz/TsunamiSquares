@@ -52,6 +52,7 @@ namespace tsunamisquares {
     };
 
     typedef struct FieldDesc FieldDesc;
+    typedef std::set<UIndex> SquareIDSet;
 
     // Vertices that make up a Tsunami Square
     struct VertexData {
@@ -140,6 +141,7 @@ namespace tsunamisquares {
     class Square : public ModelIO {
         private:
             SquareData         _data;
+            SquareIDSet        _neighbors;
 
         public:
             Square(void) {
@@ -249,11 +251,16 @@ namespace tsunamisquares {
             Vec<2> momentum(void) const {
                 return _data._velocity*mass();
             };
+            
+            void add_neighbor(const UIndex &neighbor_id) {
+                _neighbors.insert(neighbor_id);
+            };
+            
+            SquareIDSet get_neighbors(void) {
+                return _neighbors;
+            };
     
     };
-            
-    typedef std::set<UIndex> SquareIDSet;
-    
     
     
     // Class to contain all Squares and Bathymetry 
@@ -263,6 +270,7 @@ namespace tsunamisquares {
             std::map<UIndex, Square>  _squares;
             LatLonDepth _base;
             double _min_lat, _max_lat, _min_lon, _max_lon;
+            int _num_latitudes, _num_longitudes;
             // Diffusion constant
             static const double _D = 100000.0;//140616.45;
         
@@ -292,6 +300,13 @@ namespace tsunamisquares {
             
             LatLonDepth getBase(void) const {
                 return _base;
+            }
+            
+            int num_lats(void) const {
+                return _num_latitudes;
+            }
+            int num_lons(void) const {
+                return _num_longitudes;
             }
             
             double D(void) const {
