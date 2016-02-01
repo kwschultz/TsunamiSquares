@@ -157,6 +157,7 @@ xcuserdata
 #
 # ...none. Everything is now explained.
 
+*.png
 *.mp4
 *.txt
 TsunamiSquares
