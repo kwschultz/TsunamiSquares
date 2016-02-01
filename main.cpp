@@ -33,24 +33,27 @@ int main (int argc, char **argv) {
     // -------------------------------------------------------------------------------- //
     ///////////          CONSTANTS (to be moved to sim parameter file)        ////////////    
     // -------------------------------------------------------------------------------- //
-    const std::string       out_file_name    = "local/Channel_Islands_bump_flatBottom.txt";
-    const std::string       bathy_file       = "local/Channel_Islands.txt";
-    //const std::string       kml_file         = "local/Pacific_900.kml";
-    const std::string       deformation_file = "local/Channel_Islands_interp_larger_subset_dispField_event1157.txt";
-    const std::string       header           = "# time \t lon \t\t lat \t\t water height \t altitude \n";
+    const std::string   out_file_name    = "local/Channel_Islands_bump_flatBottom.txt";
+    const std::string   bathy_file       = "local/Channel_Islands.txt";
+    //const std::string   kml_file         = "local/Pacific_900.kml";
+    const std::string   deformation_file = "local/Channel_Islands_test_bump.txt";
     
     // Diffusion constant (fit to a reasonable looking sim)
     double D = 140616.45; //140616.45;
     // Flattening the bathymetry to a constant depth (negative for below sea level)
     double new_depth = -100.0;
+    // Bumping up the bottom
+    double bump_height = 100.0;
     // Number of times to move squares
-    int N_steps = 100; //number of time steps
+    int N_steps = 20; //number of time steps
     // Updating intervals, etc.
     int current_step = 0;
     int update_step = 1;
     int save_step = 1;
     double time = 0.0;
     int output_num_digits_for_percent = 3;
+    // Header for the simulation output
+    const std::string   header = "# time \t lon \t\t lat \t\t water height \t altitude \n";
     
     
     
@@ -63,6 +66,9 @@ int main (int argc, char **argv) {
     std::cout << std::endl << "Reading..."   << bathy_file.c_str() << std::endl;
     this_world.read_bathymetry(bathy_file.c_str());
     
+    // Compute the time step given the diffusion constant D
+    double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds
+    
     // Gather model information
     this_world.info();
     int num_lats = (int) sqrt(this_world.num_squares());
@@ -73,9 +79,6 @@ int main (int argc, char **argv) {
     // Write KML model
     //std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
     //this_world.write_file_kml(kml_file.c_str());
-    
-    // Compute the time step given the diffusion constant D
-    double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds
 
     // Flatten the bottom for simple simulation test cases, do not do this for tsunami simulations
     std::cout << "Flattening the bottom...";
@@ -92,19 +95,20 @@ int main (int argc, char **argv) {
     // --------------------------------------------------------------------------------//
     std::cout << "Deforming the bottom... " << std::endl;
     
-    // DEFORM VIA FILE
+    //     ==  DEFORM VIA FILE        ======
     //this_world.deformFromFile(deformation_file.c_str());
 
-    // Initial conditions
+    //     ==  DEFORM VIA CENTER BUMP ======
+    // Find the 4 center squares and bump them by a constant height upward
     tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5 + 0.5*sqrt(this_world.num_squares()));
     tsunamisquares::UIndex bot_left  = bot_right-1;
     tsunamisquares::UIndex top_left  = bot_left+(int)sqrt(this_world.num_squares());
     tsunamisquares::UIndex top_right = bot_right+(int)sqrt(this_world.num_squares());
+    this_world.deformBottom(bot_left,  bump_height);
+    this_world.deformBottom(top_left,  bump_height);
+    this_world.deformBottom(top_right, bump_height);
+    this_world.deformBottom(bot_right, bump_height);
     ////    // TODO: Save num_lons and num_lats in the world object
-    this_world.deformBottom(bot_left,100.0);
-    this_world.deformBottom(top_left,100.0);
-    this_world.deformBottom(top_right,100.0);
-    this_world.deformBottom(bot_right,100.0);
 
 
 
@@ -112,7 +116,6 @@ int main (int argc, char **argv) {
     // --==                         File I/O Preparation                          --== //   
     // --------------------------------------------------------------------------------//            
     out_file.open(out_file_name.c_str());
-    // Write the header
     out_file << header.c_str();
     std::cout.precision(output_num_digits_for_percent);
     

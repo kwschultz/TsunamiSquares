@@ -333,8 +333,8 @@ if __name__ == "__main__":
         system("python ../vq/PyVQ/pyvq/pyvq.py --field_eval  --event_file {} --model_file {} --event_id {} --lld_file {} ".format(EVENTS, MODEL, EVID, SAVE_NAME))
     
     if MODE == "animate":
-        sim_file = "local/Channel_Islands_interp_larger_EQ_sample_flatBottom.txt"
-        save_file = sim_file.split(".")[0]+"_colorChop_noLines.mp4"
+        sim_file = "local/Channel_Islands_bump_flatBottom.txt"
+        save_file = sim_file.split(".")[0]+".mp4"
         sim_data = np.genfromtxt(sim_file, dtype=[('time','f8'),('lat','f8'),('lon','f8'), ('z','f8'), ('alt','f8')])
         FPS = 10
         DPI = 100
