@@ -483,6 +483,104 @@ tsunamisquares::SquareIDSet tsunamisquares::World::getNeighborIDs(const UIndex &
     return neighbors;
 }
 
+
+
+void tsunamisquares::World::computeNeighbors(void) {
+    std::map<UIndex, Square>::iterator                                  it;
+    double                                              this_lat, this_lon; 
+    bool                                    minLat, minLon, maxLat, maxLon;
+    UIndex                       this_id, left, right, top_right, top_left;
+    UIndex                          bottom_left, bottom_right, top, bottom;
+    
+    // Use the in-place element numbering to find the IDs of the neighboring squares.
+    // Must handle the border and corner cases and not include off-model neighbors.
+    
+    for (it=_squares.begin(); it!=_squares.end(); ++it) {
+        this_id     = it->first;
+        left        = this_id-1;
+        right       = this_id+1;
+        top         = this_id-num_lons();
+        bottom      = this_id+num_lons();
+        top_left    = top-1;
+        top_right   = top+1;
+        bottom_left = bottom-1;
+        bottom_right= bottom+1;
+        
+        this_lat    = squareLatLon(this_id)[0];
+        this_lon    = squareLatLon(this_id)[1];
+        minLat      = this_lat == min_lat();
+        maxLat      = this_lat == max_lat();
+        minLon      = this_lon == min_lon();
+        maxLon      = this_lon == max_lon();
+        
+        // Handle the corner and edge cases
+        if (! (maxLat || maxLon || minLon || minLat)) {
+            // Interior squares
+            it->second.set_right(right);
+            it->second.set_left(left);
+            it->second.set_top(top);
+            it->second.set_bottom(bottom);
+            it->second.set_top_left(top_left);
+            it->second.set_top_right(top_right);
+            it->second.set_bottom_left(bottom_left);
+            it->second.set_bottom_right(bottom_right);
+        } else if (maxLat && minLon) {
+            // Top left (North West) corner
+            it->second.set_right(right);
+            it->second.set_bottom(bottom);
+            it->second.set_bottom_right(bottom_right);
+        } else if (maxLat && maxLon) {
+            // Top right (North East) corner
+            it->second.set_left(left);
+            it->second.set_bottom(bottom);
+            it->second.set_bottom_left(bottom_left);
+        } else if (minLat && maxLon) {
+            // Bottom right (South East) corner
+            it->second.set_left(left);
+            it->second.set_top(top);
+            it->second.set_top_left(top_left);
+        } else if (minLat && minLon) {
+            // Bottom left (South West) corner
+            it->second.set_right(right);
+            it->second.set_top(top);
+            it->second.set_top_right(top_right);
+        } else if (minLon) {
+            // Left (West) border
+            it->second.set_right(right);
+            it->second.set_top(top);
+            it->second.set_bottom(bottom);
+            it->second.set_top_right(top_right);
+            it->second.set_bottom_right(bottom_right);
+        } else if (maxLat) {
+            // Top (North) border
+            it->second.set_right(right);
+            it->second.set_left(left);
+            it->second.set_bottom(bottom);
+            it->second.set_bottom_left(bottom_left);
+            it->second.set_bottom_right(bottom_right);
+        } else if (maxLon) {
+            // right (East) border
+            it->second.set_left(left);
+            it->second.set_top(top);
+            it->second.set_bottom(bottom);
+            it->second.set_top_left(top_left);
+            it->second.set_bottom_left(bottom_left);
+        } else if (minLat) {
+            // Bottom (South) border
+            it->second.set_right(right);
+            it->second.set_left(left);
+            it->second.set_top(top);
+            it->second.set_top_left(top_left);
+            it->second.set_top_right(top_right);        
+        } else {
+            std::cout << "Error, no match to any case! (square " << this_id << ")" << std::endl;
+        }
+
+    }
+    
+    
+}
+
 // ----------------------------------------------------------------------
 // -------------------- Single Square Functions -------------------------
 // ----------------------------------------------------------------------
@@ -988,5 +1086,9 @@ int tsunamisquares::World::deformFromFile(const std::string &file_name) {
 
     return 0;
 }
+
+
+
+
 
 

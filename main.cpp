@@ -71,12 +71,50 @@ int main (int argc, char **argv) {
     
     // Gather model information
     this_world.info();
-    int num_lats = (int) sqrt(this_world.num_squares());
-    int num_lons = num_lats;
+    int num_lats = this_world.num_lats();
+    int num_lons = this_world.num_lons();
     ids = this_world.getSquareIDs();
     double max_time = N_steps*dt;
 
-    std::cout << "Num lons: " << this_world.num_lons() << "   Num lats: " << this_world.num_lats() << std::endl;
+
+
+    // Index the neighbors by left/right/top etc.
+    std::cout << "Indexing neighbors......";
+    this_world.computeNeighbors();
+
+
+    tsunamisquares::UIndex top_left_corner  = 0;
+    this_world.square(top_left_corner).print_neighbors();
+    
+    tsunamisquares::UIndex top_right_corner = num_lons-1;
+    this_world.square(top_right_corner).print_neighbors();
+    
+    tsunamisquares::UIndex bottom_left_corner = num_lons*(num_lats-1);
+    this_world.square(bottom_left_corner).print_neighbors();
+    
+    tsunamisquares::UIndex bottom_right_corner = num_lons*num_lats - 1;
+    this_world.square(bottom_right_corner).print_neighbors();
+    
+    tsunamisquares::UIndex central = (int)(this_world.num_squares()*0.5);
+    this_world.square(central).print_neighbors();
+    
+    tsunamisquares::UIndex left_border = num_lons;
+    this_world.square(left_border).print_neighbors();
+    
+    tsunamisquares::UIndex top_border = (int) (num_lons*0.5);
+    this_world.square(top_border).print_neighbors();
+    
+    tsunamisquares::UIndex right_border = 2*num_lons - 1;
+    this_world.square(right_border).print_neighbors();
+    
+    tsunamisquares::UIndex bottom_border = bottom_left_corner+top_border;
+    this_world.square(bottom_border).print_neighbors();
+
+    
+    
+    
+    
+
 
 //    // Write KML model
 //    //std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
