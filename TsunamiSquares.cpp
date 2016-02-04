@@ -102,7 +102,7 @@ void tsunamisquares::World::diffuseSquares(const double dt) {
             // Add the height change to the updated height
             it->second.set_updated_height(it->second.updated_height() + height_change);
         
-            neighborIDs = getNeighborIDs(it->first);
+            neighborIDs = it->second.get_valid_nearest_neighbors();
             
             for (id_it=neighborIDs.begin(); id_it!=neighborIDs.end(); ++id_it) {
                 nit = _squares.find(*id_it);
@@ -506,48 +506,6 @@ tsunamisquares::UIndex tsunamisquares::World::whichSquare(const Vec<2> &location
     // Return the ID of the nearest square
     return square_dists.begin()->second;
 }
-
-// Get the square_id for each of the 4 closest squares to some square square_id
-tsunamisquares::SquareIDSet tsunamisquares::World::getNeighborIDs(const UIndex &square_id) const {
-    std::map<double, UIndex>                  square_dists;
-    std::map<double, UIndex>::const_iterator  it;
-    std::map<UIndex, Square>::const_iterator  sit;
-    SquareIDSet                               neighbors;
-    std::map<UIndex, Square>::const_iterator  this_sit = _squares.find(square_id);
-    unsigned int                              num_neighbors = 4;
-
-    // Compute distance from center of the input square to the center of each other square.
-    // Since we use a map, the distances will be ordered since they are the keys
-    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
-        // Skip the square whose neighbors we're trying to find 
-        if (sit->second.id() != square_id) {
-            double square_dist = squareCenter(sit->first).dist(squareCenter(this_sit->first));
-            square_dists.insert(std::make_pair(square_dist, sit->second.id()));
-        }
-    }
-    
-    // If the square is along the edge, only return 3 neighbors.
-    // If the square is in a corner, return 2 neighbors.
-    int minLat = squareLatLon(this_sit->first)[0] == min_lat();
-    int maxLat = squareLatLon(this_sit->first)[0] == max_lat();
-    int minLon = squareLatLon(this_sit->first)[1] == min_lon();
-    int maxLon = squareLatLon(this_sit->first)[1] == max_lon();
-    int cornerSum = minLat + minLon + maxLon + maxLat;    
-    if (cornerSum == 1) {
-        num_neighbors = 3;
-    } else if (cornerSum == 2) {
-        num_neighbors = 2;
-    }
-    
-    // Grab the closest 4 squares and return their IDs
-    for (it=square_dists.begin(); it!=square_dists.end(); ++it) {
-        neighbors.insert(it->second);
-        if (neighbors.size() == num_neighbors) break;
-    }
-    
-    return neighbors;
-}
-
 
 
 void tsunamisquares::World::computeNeighbors(void) {
@@ -1151,9 +1109,3 @@ int tsunamisquares::World::deformFromFile(const std::string &file_name) {
 
     return 0;
 }
-
-
-
-
-
-
