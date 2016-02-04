@@ -290,17 +290,16 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
     
     // Initialize the 4 points that will be used to approximate the slopes d/dx and d/dy
     // for this square. These are the centers of the neighbor squares.
-    Vec<2> center = squareCenter(square_id);
-    double Lx = square_it->second.Lx();
-    double Ly = square_it->second.Ly();
+    Vec<2> center = squareCenter(square_id);   
     
-    UIndex leftID = square_it->second.left();
-    UIndex rightID = square_it->second.right();
-    UIndex topID = square_it->second.top();
-    UIndex bottomID = square_it->second.left();
+    UIndex leftID   = square_it->second.left();
+    UIndex rightID  = square_it->second.right();
+    UIndex topID    = square_it->second.top();
+    UIndex bottomID = square_it->second.bottom();
     
-    // TODO: Better boundary conditions. For now, just set no acceleration along boundary
-    if (squareLatLon(square_it->first)[0] == min_lat() || squareLatLon(square_it->first)[0] == max_lat() || squareLatLon(square_it->first)[1] == min_lon() || squareLatLon(square_it->first)[1] == max_lon() ) {
+    // TODO: Better boundary conditions. For now, just set no acceleration along boundary.
+    // ALSO: Not accelerating squares whose neighbor is on a boundary.
+    if (squareLatLon(square_it->first)[0] == min_lat() || squareLatLon(square_it->first)[0] == max_lat() || squareLatLon(square_it->first)[1] == min_lon() || squareLatLon(square_it->first)[1] == max_lon() || leftID == INVALID_INDEX || rightID == INVALID_INDEX || topID == INVALID_INDEX || bottomID == INVALID_INDEX) {
         gradient = Vec<2>(0.0,0.0);
     } else {
         // Altitude of water level of neighbor squares

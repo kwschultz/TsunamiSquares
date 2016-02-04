@@ -30,6 +30,7 @@
 namespace tsunamisquares {
     typedef unsigned int UIndex;
     static const UIndex INVALID_INDEX = std::numeric_limits<unsigned int>::max();
+    //// INVALID_INDEX = 4294967295;
     
     class ModelIO {
         private:

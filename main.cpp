@@ -33,9 +33,9 @@ int main (int argc, char **argv) {
     // -------------------------------------------------------------------------------- //
     ///////////          CONSTANTS (to be moved to sim parameter file)        ////////////    
     // -------------------------------------------------------------------------------- //
-    const std::string   out_file_name    = "local/Channel_Islands_bump_flatBottom.txt";
-    const std::string   bathy_file       = "local/Channel_Islands.txt";
-    //const std::string   kml_file         = "local/Pacific_900.kml";
+    const std::string   out_file_name    = "local/Pacific_900_bump_flatBottom_indexed.txt";
+    const std::string   bathy_file       = "local/Pacific_900.txt";
+    //const std::string   kml_file         = "local/Pacific_36.kml";
     const std::string   deformation_file = "local/Channel_Islands_test_bump.txt";
     
     // Diffusion constant (fit to a reasonable looking sim)
@@ -45,7 +45,7 @@ int main (int argc, char **argv) {
     // Bumping up the bottom
     double bump_height = 100.0;
     // Number of times to move squares
-    int N_steps = 20; //number of time steps
+    int N_steps = 10; //number of time steps
     // Updating intervals, etc.
     int current_step = 0;
     int update_step = 1;
@@ -73,128 +73,108 @@ int main (int argc, char **argv) {
     this_world.info();
     int num_lats = this_world.num_lats();
     int num_lons = this_world.num_lons();
+    std::cout << "Lons by Lats = (" << num_lons << ", " << num_lats << ")...";
     ids = this_world.getSquareIDs();
     double max_time = N_steps*dt;
-
 
 
     // Index the neighbors by left/right/top etc.
     std::cout << "Indexing neighbors......";
     this_world.computeNeighbors();
-
-
-    tsunamisquares::UIndex top_left_corner  = 0;
-    this_world.square(top_left_corner).print_neighbors();
-    
-    tsunamisquares::UIndex top_right_corner = num_lons-1;
-    this_world.square(top_right_corner).print_neighbors();
-    
-    tsunamisquares::UIndex bottom_left_corner = num_lons*(num_lats-1);
-    this_world.square(bottom_left_corner).print_neighbors();
-    
-    tsunamisquares::UIndex bottom_right_corner = num_lons*num_lats - 1;
-    this_world.square(bottom_right_corner).print_neighbors();
-    
-    tsunamisquares::UIndex central = (int)(this_world.num_squares()*0.5);
-    this_world.square(central).print_neighbors();
-    
-    tsunamisquares::UIndex left_border = num_lons;
-    this_world.square(left_border).print_neighbors();
-    
-    tsunamisquares::UIndex top_border = (int) (num_lons*0.5);
-    this_world.square(top_border).print_neighbors();
-    
-    tsunamisquares::UIndex right_border = 2*num_lons - 1;
-    this_world.square(right_border).print_neighbors();
-    
-    tsunamisquares::UIndex bottom_border = bottom_left_corner+top_border;
-    this_world.square(bottom_border).print_neighbors();
-
-    
-    
-    
-    
-
-
-//    // Write KML model
-//    //std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
-//    //this_world.write_file_kml(kml_file.c_str());
 //
-//    // Flatten the bottom for simple simulation test cases, do not do this for tsunami simulations
-//    std::cout << "Flattening the bottom...";
-//    this_world.flattenBottom(new_depth);
+//    tsunamisquares::SquareIDSet valids = this_world.square(0).get_valid_neighbors();
+//    tsunamisquares::SquareIDSet::const_iterator vit;
 //    
-//    // Put water into squares to bring water level up to sealevel.
-//    std::cout << "Filling with water..." << std::flush;
-//    this_world.fillToSeaLevel();
-//    
-//    
-//
-//    // --------------------------------------------------------------------------------//
-//    //            Sea Floor Deformation and Initial Conditions                         //
-//    // --------------------------------------------------------------------------------//
-//    std::cout << "Deforming the bottom... " << std::endl;
-//    
-//    //     ==  DEFORM VIA FILE        ======
-//    //this_world.deformFromFile(deformation_file.c_str());
-//
-//    //     ==  DEFORM VIA CENTER BUMP ======
-//    // Find the 4 center squares and bump them by a constant height upward
-//    tsunamisquares::UIndex bot_right = (int)(this_world.num_squares()*0.5);
-//    tsunamisquares::UIndex bot_left  = bot_right-1;
-//    tsunamisquares::UIndex top_left  = bot_left-this_world.num_lons();
-//    tsunamisquares::UIndex top_right = top_left+1;
-//    this_world.deformBottom(bot_left,  bump_height);
-//    this_world.deformBottom(top_left,  bump_height);
-//    this_world.deformBottom(top_right, bump_height);
-//    this_world.deformBottom(bot_right, bump_height);
-//    ////    // TODO: Save num_lons and num_lats in the world object
-//
-//
-//
-//    // --------------------------------------------------------------------------------//
-//    // --==                         File I/O Preparation                          --== //   
-//    // --------------------------------------------------------------------------------//            
-//    out_file.open(out_file_name.c_str());
-//    out_file << header.c_str();
-//    std::cout.precision(output_num_digits_for_percent);
-//    
-//    
-//    
-//    // --------------------------------------------------------------------------------//
-//    // --========-           Begin the Simulation; Move the Squares          ----====- //          
-//    // --------------------------------------------------------------------------------//    
-//    std::cout << "Moving squares....time_step=" <<dt << "...";
-//    while (time < max_time) {
-//        // If this is a writing step, print status
-//        if (current_step%update_step == 0) {
-//            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
-//            std::cout << std::flush;
-//        }
-//    
-//        // Write the current state to file
-//        if (current_step%save_step == 0) {
-//            for (it=ids.begin(); it!=ids.end(); ++it) {
-//                this_world.write_square_ascii(out_file, time, *it);
-//            }
-//        }
-//        // Move the squares
-//        this_world.moveSquares(dt);
-//        this_world.diffuseSquares(dt);
-//        time += dt;
-//        current_step += 1;
+//    for (vit=valids.begin(); vit!=valids.end(); ++vit) {
+//        std::cout << *vit << std::endl;
 //    }
-//    out_file.close();
-//    
-//    
-//    // --------------------------------------------------------------------------------//
-//    // --========---                    Wrap up and Reporting            ---=======--- //
-//    // --------------------------------------------------------------------------------//        
-//    std::cout << std::endl << "Results written to " << out_file_name << std::endl;
-//    end = clock();
-//    std::cout.precision(2+output_num_digits_for_percent);
-//    std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
-//    return 0;
+    
+
+
+    // Write KML model
+    //std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
+    //this_world.write_file_kml(kml_file.c_str());
+
+    // Flatten the bottom for simple simulation test cases, do not do this for tsunami simulations
+    std::cout << "Flattening the bottom...";
+    this_world.flattenBottom(new_depth);
+    
+    // Put water into squares to bring water level up to sealevel.
+    std::cout << "Filling with water..." << std::flush;
+    this_world.fillToSeaLevel();
+    
+    
+
+    // --------------------------------------------------------------------------------//
+    //            Sea Floor Deformation and Initial Conditions                         //
+    // --------------------------------------------------------------------------------//
+    std::cout << "Deforming the bottom... " << std::endl;
+    
+    //     ==  DEFORM VIA FILE        ======
+    //this_world.deformFromFile(deformation_file.c_str());
+
+    //     ==  DEFORM VIA CENTER BUMP ======
+    // Find the 4 center squares and bump them by a constant height upward
+    tsunamisquares::UIndex central = (int) (0.5*num_lons*(num_lats + 1));
+    std::cout << " about the central square " << central << "...";
+    
+    tsunamisquares::UIndex left    = this_world.square(central).left();
+    tsunamisquares::UIndex right   = this_world.square(central).right();
+    tsunamisquares::UIndex top     = this_world.square(central).top();
+    tsunamisquares::UIndex bottom  = this_world.square(central).bottom();
+    
+    this_world.deformBottom(central,bump_height);
+    this_world.deformBottom(left,   bump_height);
+    this_world.deformBottom(top,    bump_height);
+    this_world.deformBottom(right,  bump_height);
+    this_world.deformBottom(bottom, bump_height);
+    ////    // TODO: Save num_lons and num_lats in the world object
+
+
+
+    // --------------------------------------------------------------------------------//
+    // --==                         File I/O Preparation                          --== //   
+    // --------------------------------------------------------------------------------//            
+    out_file.open(out_file_name.c_str());
+    out_file << header.c_str();
+    std::cout.precision(output_num_digits_for_percent);
+    
+    
+    
+    // --------------------------------------------------------------------------------//
+    // --========-           Begin the Simulation; Move the Squares          ----====- //          
+    // --------------------------------------------------------------------------------//    
+    std::cout << "Moving squares....time_step=" <<dt << "...";
+    while (time < max_time) {
+        // If this is a writing step, print status
+        if (current_step%update_step == 0) {
+            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
+            std::cout << std::flush;
+        }
+    
+        // Write the current state to file
+        if (current_step%save_step == 0) {
+            for (it=ids.begin(); it!=ids.end(); ++it) {
+                this_world.write_square_ascii(out_file, time, *it);
+            }
+        }
+        // Move the squares
+        this_world.moveSquares(dt);
+        this_world.diffuseSquares(dt);
+        time += dt;
+        current_step += 1;
+    }
+    out_file.close();
+    
+    
+    // --------------------------------------------------------------------------------//
+    // --========---                    Wrap up and Reporting            ---=======--- //
+    // --------------------------------------------------------------------------------//        
+    std::cout << std::endl << "Results written to " << out_file_name << std::endl;
+    end = clock();
+    std::cout.precision(2+output_num_digits_for_percent);
+    std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
+    return 0;
 }
 
 
@@ -249,4 +229,34 @@ int main (int argc, char **argv) {
 //    this_world.diffuseSquares(dt);
 //    this_world.diffuseSquares(dt);
 
+
+
+
+//  Verifying the neighbor indexing ////////////////////////
+//    tsunamisquares::UIndex top_left_corner  = 0;
+//    this_world.square(top_left_corner).print_neighbors();
+//    
+//    tsunamisquares::UIndex top_right_corner = num_lons-1;
+//    this_world.square(top_right_corner).print_neighbors();
+//    
+//    tsunamisquares::UIndex bottom_left_corner = num_lons*(num_lats-1);
+//    this_world.square(bottom_left_corner).print_neighbors();
+//    
+//    tsunamisquares::UIndex bottom_right_corner = num_lons*num_lats - 1;
+//    this_world.square(bottom_right_corner).print_neighbors();
+//    
+//    tsunamisquares::UIndex central = (int)(this_world.num_squares()*0.5);
+//    this_world.square(central).print_neighbors();
+//    
+//    tsunamisquares::UIndex left_border = num_lons;
+//    this_world.square(left_border).print_neighbors();
+//    
+//    tsunamisquares::UIndex top_border = (int) (num_lons*0.5);
+//    this_world.square(top_border).print_neighbors();
+//    
+//    tsunamisquares::UIndex right_border = 2*num_lons - 1;
+//    this_world.square(right_border).print_neighbors();
+//    
+//    tsunamisquares::UIndex bottom_border = bottom_left_corner+top_border;
+//    this_world.square(bottom_border).print_neighbors();
 
