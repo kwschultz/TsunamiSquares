@@ -167,6 +167,7 @@ void tsunamisquares::World::moveSquares(const double dt) {
         
             // Find the nearest squares and their distances to the new position
             neighbors = getNearest(new_pos);
+            //neighbors = getNearest_from(new_pos, sit->first);
             
             // Init these for renormalizing the fractions
             double fraction_sum = 0.0;
@@ -293,11 +294,10 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_i
     double Lx = square_it->second.Lx();
     double Ly = square_it->second.Ly();
     
-    // Find the squareID for these locations
-    UIndex leftID   = whichSquare( Vec<2>(center[0]-Lx, center[1])    );
-    UIndex rightID  = whichSquare( Vec<2>(center[0]+Lx, center[1])    );
-    UIndex topID    = whichSquare( Vec<2>(center[0]   , center[1]+Ly) ); 
-    UIndex bottomID = whichSquare( Vec<2>(center[0]   , center[1]-Ly) );
+    UIndex leftID = square_it->second.left();
+    UIndex rightID = square_it->second.right();
+    UIndex topID = square_it->second.top();
+    UIndex bottomID = square_it->second.left();
     
     // TODO: Better boundary conditions. For now, just set no acceleration along boundary
     if (squareLatLon(square_it->first)[0] == min_lat() || squareLatLon(square_it->first)[0] == max_lat() || squareLatLon(square_it->first)[1] == min_lon() || squareLatLon(square_it->first)[1] == max_lon() ) {
@@ -402,6 +402,72 @@ void tsunamisquares::World::flattenBottom(const double &depth) {
 //// ----------------------------------------------------------------------
 //// -------------------- Utility Functions -------------------------------
 //// ----------------------------------------------------------------------
+
+std::map<double, tsunamisquares::UIndex> tsunamisquares::World::getNearest_from(const Vec<2> &location, const UIndex &original_id) const {
+    std::map<double, UIndex>                  global_square_dists;
+    std::map<double, UIndex>                  local_square_dists;
+    SquareIDSet::const_iterator               it, iit;
+    std::map<double, UIndex>::const_iterator  dist_it;
+    std::map<UIndex, Square>::const_iterator  sit;
+    SquareIDSet                               valid_neighbors, valid_neighbors_and_neighbors, neighbors_neighbors; 
+    SquareIDSet                               global_neighbors, local_neighbors;
+    UIndex                                    neighbor_id;
+    
+    valid_neighbors = _squares.find(original_id)->second.get_valid_neighbors();
+    
+    // Iterate over the neighbors of the original position of the square before moving to new location.
+    //    Keep track of their IDs, and also grab the IDs of their neighbors. These next-nearest neighbors 
+    //    and their neighbors should cover the area around "location" if the time step is small enough.
+    Square orig_square = _squares.find(original_id)->second;
+    assertThrow(squareCenter(original_id).dist(location)/fmin(orig_square.Lx(),orig_square.Ly()) < 2,"Square moved more than 2 square lengths in one time step!");
+    
+    //////// Debug -------------------
+    std::cout << "\nMoving square " << original_id << " to " << location[0] << "," << location[1] << std::endl;
+    
+    for (it=valid_neighbors.begin(); it!=valid_neighbors.end(); ++it) {
+        neighbor_id = *it;
+        SquareIDSet neighbors_neighbors = _squares.find(original_id)->second.get_valid_neighbors();
+        // Add the neighbor's neighbors to the cumulative list
+        valid_neighbors_and_neighbors.insert(neighbor_id);
+        for (iit=neighbors_neighbors.begin(); iit!=neighbors_neighbors.end(); ++iit) {
+            valid_neighbors_and_neighbors.insert(*iit);
+        }
+    }
+    
+    
+    // Compute distance from "location" to the center of each neighboring square.
+    for (it=valid_neighbors_and_neighbors.begin(); it!=valid_neighbors_and_neighbors.end(); ++it) {
+        double square_dist = squareCenter(*it).dist(location);
+        local_square_dists.insert(std::make_pair(square_dist, *it));
+    }
+
+    std::cout << "Neighbors nearest:   Square " << local_square_dists.begin()->second << " with distance " << local_square_dists.begin()->first << std::endl;
+    std::cout << "Global nearest:   Square " << global_square_dists.begin()->second << " with distance " << global_square_dists.begin()->first << std::endl;
+
+    UIndex local_nearest = local_square_dists.begin()->second;
+    UIndex global_nearest = global_square_dists.begin()->second;
+    
+
+    std::cout << "Nearest square methods match: " << (local_nearest==global_nearest) << std::endl;
+    
+    // Compute distance from "location" to the center of each square.
+    // Since we use a map, the distances will be ordered since they are the keys
+    for (sit=_squares.begin(); sit!=_squares.end(); ++sit) {
+        double square_dist = squareCenter(sit->first).dist(location);
+        global_square_dists.insert(std::make_pair(square_dist, sit->second.id()));
+    }
+    
+    // Iterate again thru the distance-sorted map, grab the closest squares
+//    for (dist_it=global_square_dists.begin(); dist_it!=global_square_dists.end(); ++dist_it) {
+//        global_neighbors.insert(std::make_pair(dist_it->first, dist_it->second));
+//        if (global_neighbors.size() == valid_neighbors_and_neighbors.size()) break;
+//    }
+    
+    return global_square_dists;
+}
+
+
+
 // Get the square_id for each of the 4 closest squares to some location = (x,y)
 std::map<double, tsunamisquares::UIndex> tsunamisquares::World::getNearest(const Vec<2> &location) const {
     std::map<double, UIndex>                  square_dists;
