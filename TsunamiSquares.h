@@ -141,7 +141,8 @@ namespace tsunamisquares {
     class Square : public ModelIO {
         private:
             SquareData         _data;
-            SquareIDSet        _neighbors;
+            //SquareIDSet        _neighbors;
+            UIndex    _top, _bottom, _right, _left, _top_right, _top_left, _bottom_left, _bottom_right;
 
         public:
             Square(void) {
@@ -152,6 +153,10 @@ namespace tsunamisquares {
                 _data._height = _data._updated_height = _data._Lx = _data._Ly  = std::numeric_limits<double>::quiet_NaN();
                 _data._density = 1025.0; // sea water by default
                 _data._friction = 0.02;
+                
+                _left = _right = _top = _bottom = INVALID_INDEX;
+                _top_right = _top_left = _bottom_left = _bottom_right = INVALID_INDEX;
+                
             };
             
             void clear(void);
@@ -252,13 +257,98 @@ namespace tsunamisquares {
                 return _data._velocity*mass();
             };
             
-            void add_neighbor(const UIndex &neighbor_id) {
-                _neighbors.insert(neighbor_id);
+            //  All functions with top/bottom/left/right are setting the IDs of the corresponding
+            //     neighboring squares. Left/Right/Top/Bottom are nearest neighbors, the others are
+            //     next-nearest neighbors.
+            
+            void set_top(const UIndex &id) {
+                _top = id;
+            };
+            UIndex top(void) const {
+                return _top;
             };
             
-            SquareIDSet get_neighbors(void) {
-                return _neighbors;
+            void set_right(const UIndex &id) {
+                _right = id;
             };
+            UIndex right(void) const {
+                return _right;
+            };
+            
+            void set_left(const UIndex &id) {
+                _left = id;
+            };
+            UIndex left(void) const {
+                return _left;
+            };
+            
+            void set_bottom(const UIndex &id) {
+                _bottom = id;
+            };
+            UIndex bottom(void) const {
+                return _bottom;
+            };
+            
+            void set_top_left(const UIndex &id) {
+                _top_left = id;
+            };
+            UIndex top_left(void) const {
+                return _top_left;
+            };
+            
+            void set_top_right(const UIndex &id) {
+                _top_right = id;
+            };
+            UIndex top_right(void) const {
+                return _top_right;
+            };
+            
+            void set_bottom_left(const UIndex &id) {
+                _bottom_left = id;
+            };
+            UIndex bottom_left(void) const {
+                return _bottom_left;
+            };
+            
+            void set_bottom_right(const UIndex &id) {
+                _bottom_right = id;
+            };
+            UIndex bottom_right(void) const {
+                return _bottom_right;
+            };
+            
+            SquareIDSet get_valid_neighbors(void) const {
+                SquareIDSet valid_neighbors;
+                if (left()        != INVALID_INDEX) valid_neighbors.insert(left());
+                if (right()       != INVALID_INDEX) valid_neighbors.insert(right());
+                if (top()         != INVALID_INDEX) valid_neighbors.insert(top());
+                if (bottom()      != INVALID_INDEX) valid_neighbors.insert(bottom());
+                if (top_left()    != INVALID_INDEX) valid_neighbors.insert(top_left());
+                if (bottom_left() != INVALID_INDEX) valid_neighbors.insert(bottom_left());
+                if (top_right()   != INVALID_INDEX) valid_neighbors.insert(top_right());
+                if (bottom_right()!= INVALID_INDEX) valid_neighbors.insert(bottom_right());
+                return valid_neighbors;
+            };
+            
+            void print_neighbors(void) {
+                std::cout << "--- #" << id() << " ------------" << std::endl;
+                std::cout << " left:\t\t" << left() << std::endl;
+                std::cout << " right:\t\t" << right() << std::endl;
+                std::cout << " top:\t\t" << top() << std::endl;
+                std::cout << " bottom:\t" << bottom() << std::endl;
+                std::cout << " t left:\t" << top_left() << std::endl;
+                std::cout << " t right:\t" << top_right() << std::endl;
+                std::cout << " b left:\t" << bottom_left() << std::endl;
+                std::cout << " b right:\t" << bottom_right() << std::endl;
+            }
+            
+//            void add_neighbor(const UIndex &neighbor_id) {
+//                _neighbors.insert(neighbor_id);
+//            };
+//            
+//            SquareIDSet get_neighbors(void) {
+//                return _neighbors;
+//            };
     
     };
     
@@ -338,7 +428,11 @@ namespace tsunamisquares {
             SquareIDSet getVertexIDs(void) const;
 
             std::map<double, UIndex> getNearest(const Vec<2> &location) const;
+            std::map<double, tsunamisquares::UIndex> getNearest_from(const Vec<2> &location, const UIndex &original_id) const;
             SquareIDSet getNeighborIDs(const UIndex &square_id) const;
+            
+            /// Test ///
+            void computeNeighbors(void);
             
             // ======= Main functions =========
             void fillToSeaLevel(void);
