@@ -331,6 +331,15 @@ namespace tsunamisquares {
                 return valid_neighbors;
             };
             
+            SquareIDSet get_valid_nearest_neighbors(void) const {
+                SquareIDSet valid_neighbors;
+                if (left()        != INVALID_INDEX) valid_neighbors.insert(left());
+                if (right()       != INVALID_INDEX) valid_neighbors.insert(right());
+                if (top()         != INVALID_INDEX) valid_neighbors.insert(top());
+                if (bottom()      != INVALID_INDEX) valid_neighbors.insert(bottom());
+                return valid_neighbors;
+            };
+            
             void print_neighbors(void) {
                 std::cout << "--- #" << id() << " ------------" << std::endl;
                 std::cout << " left:\t\t" << left() << std::endl;
