@@ -283,6 +283,90 @@ void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
     }
 }
 
+// Matrix solver. Solve Ax=b for x.
+// Source: Virtual Quake v2.1.2
+void tsunamisquares::solve_it(int n, double *x, double *A, double *b) {
+    int     i, j, k;
+    double  v, f, sum;
+
+    for (i=0; i<n; ++i) {
+        v = A[i+n*i];
+
+        for (j=i+1; j<n; ++j) {
+            f = A[i+n*j]/v;
+
+            for (k=0; k<n; ++k) {
+                A[k+n*j] -= f*A[k+n*i];
+            }
+
+            b[j] -= f*b[i];
+        }
+    }
+
+    for (i=n-1; i>=0; --i) {
+        sum = b[i];
+
+        for (j=i+1; j<n; ++j) {
+            sum -= A[j+n*i]*x[j];
+        }
+
+        x[i] = sum/A[i+n*i];
+    }
+}
+
+double * tsunamisquares::World::fitPointsToPlane(const SquareIDSet &square_ids) {
+    // --------------------------------------------------------------------
+    // Based on StackOverflow article:
+    // http://stackoverflow.com/questions/1400213/3d-least-squares-plane
+    // --------------------------------------------------------------------
+    std::vector<double>             x_vals, y_vals, z_vals;
+    SquareIDSet::const_iterator                      id_it;
+    int                             i, N = square_ids.size();
+    // Build vector pointers
+    double *A = new double[9];
+    double *b = new double[3];
+    double *x = new double[3];
+    
+    for (id_it=square_ids.begin(); id_it!=square_ids.end(); ++id_it) {
+        x_vals.push_back(squareCenter(*id_it)[0]);
+        y_vals.push_back(squareCenter(*id_it)[1]);
+        z_vals.push_back(squareLevel(*id_it));
+    }
+    
+    // Build the b vector and the A matrix.
+    // Single index for matrix, array style. A[i][j] = A_vec[i*3 + j],  N_cols=3
+    for (i=0; i<N; ++i) {
+        std::cout << "x[" << i << "] = " << x_vals[i] << std::endl;
+        std::cout << "y[" << i << "] = " << y_vals[i] << std::endl;
+        std::cout << "z[" << i << "] = " << z_vals[i] << std::endl << std::endl;
+            
+        b[0] += x_vals[i]*z_vals[i];
+        b[1] += y_vals[i]*z_vals[i];
+        b[2] += z_vals[i];
+        
+        A[0] += x_vals[i]*x_vals[i];
+        A[1] += x_vals[i]*y_vals[i];
+        A[2] += x_vals[i];
+        A[3] += x_vals[i]*y_vals[i];
+        A[4] += y_vals[i]*y_vals[i];
+        A[5] += y_vals[i];
+        A[6] += x_vals[i];
+        A[7] += y_vals[i];
+        A[8] += 1.0;
+    }
+
+    std::cout << "pre x: " << x[0] << ", " << x[1] << ", " << x[2] << std::endl;
+
+    // Solve the matrix equation. Stores solution in the x pointer
+    solve_it(3, x, A, b);
+    
+    return x;
+
+}
+
+
+
+
 tsunamisquares::Vec<2> tsunamisquares::World::getGradient(const UIndex &square_id) const {
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
     Vec<2> gradient;

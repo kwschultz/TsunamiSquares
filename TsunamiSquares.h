@@ -32,6 +32,10 @@ namespace tsunamisquares {
     static const UIndex INVALID_INDEX = std::numeric_limits<unsigned int>::max();
     //// INVALID_INDEX = 4294967295;
     
+    // Matrix solver. Solve Ax=b for x.
+    // Source: Virtual Quake v2.1.2
+    void solve_it(int n, double *x, double *A, double *b);
+    
     class ModelIO {
         private:
             std::string         _comment;
@@ -340,6 +344,20 @@ namespace tsunamisquares {
                 return valid_neighbors;
             };
             
+            SquareIDSet get_nearest_neighbors_and_self(void) const {
+                SquareIDSet valid_neighbors;
+                if (left()        != INVALID_INDEX) valid_neighbors.insert(left());
+                if (right()       != INVALID_INDEX) valid_neighbors.insert(right());
+                if (top()         != INVALID_INDEX) valid_neighbors.insert(top());
+                if (bottom()      != INVALID_INDEX) valid_neighbors.insert(bottom());
+                if (top_left()    != INVALID_INDEX) valid_neighbors.insert(top_left());
+                if (bottom_left() != INVALID_INDEX) valid_neighbors.insert(bottom_left());
+                if (top_right()   != INVALID_INDEX) valid_neighbors.insert(top_right());
+                if (bottom_right()!= INVALID_INDEX) valid_neighbors.insert(bottom_right());
+                valid_neighbors.insert(id());
+                return valid_neighbors;
+            };
+            
             void print_neighbors(void) {
                 std::cout << "--- #" << id() << " ------------" << std::endl;
                 std::cout << " left:\t\t" << left() << std::endl;
@@ -449,6 +467,7 @@ namespace tsunamisquares {
             void moveSquares(const double dt);
             void diffuseSquares(const double dt);
             Vec<2> getGradient(const UIndex &square_id) const;
+            double * fitPointsToPlane(const SquareIDSet &square_ids);
             void updateAcceleration(const UIndex &square_id);
             void deformBottom(const UIndex &square_id, const double &height_change);
             UIndex whichSquare(const Vec<2> &location) const;
