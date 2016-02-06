@@ -325,14 +325,8 @@ tsunamisquares::Vec<2> tsunamisquares::World::fitPointsToPlane(const SquareIDSet
 //    std::cout << "A: " << A[0] << ", " << A[1] << ", " << A[2] << std::endl;
 //    std::cout << "   " << A[3] << ", " << A[4] << ", " << A[5] << std::endl;
 //    std::cout << "   " << A[6] << ", " << A[7] << ", " << A[8] << std::endl;
-
-
-    // Solve the matrix equation. Stores solution in the x pointer
-    //solve_it(3, x, A, b);
     
-    //return x;
-    
-    // Matrix solver below
+    // Matrix solver below is adapted from Virtual Quake
     int     j, k;
     double  v, f, sum;
     int     n = 3;

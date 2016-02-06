@@ -65,6 +65,9 @@ int main (int argc, char **argv) {
     this_world.clear();
     std::cout << std::endl << "Reading..."   << bathy_file.c_str() << std::endl;
     this_world.read_bathymetry(bathy_file.c_str());
+    // Index the neighbors by left/right/top etc.
+    std::cout << "Indexing neighbors......";
+    this_world.computeNeighbors();
     
     // Compute the time step given the diffusion constant D
     double dt = (double) (int) this_world.square(0).Lx()*this_world.square(0).Ly()/(2*D); //seconds
@@ -77,10 +80,6 @@ int main (int argc, char **argv) {
     ids = this_world.getSquareIDs();
     double max_time = N_steps*dt;
 
-
-    // Index the neighbors by left/right/top etc.
-    std::cout << "Indexing neighbors......";
-    this_world.computeNeighbors();
 //
 //    tsunamisquares::SquareIDSet valids = this_world.square(0).get_valid_neighbors();
 //    tsunamisquares::SquareIDSet::const_iterator vit;
@@ -89,8 +88,6 @@ int main (int argc, char **argv) {
 //        std::cout << *vit << std::endl;
 //    }
     
-
-
     // Write KML model
     //std::cout << "Writing KML..."   << kml_file.c_str() << "  ...";
     //this_world.write_file_kml(kml_file.c_str());
@@ -113,67 +110,100 @@ int main (int argc, char **argv) {
     //     ==  DEFORM VIA FILE        ======
     //this_world.deformFromFile(deformation_file.c_str());
 
-    //     ==  DEFORM VIA CENTER BUMP ======
-    // Find the 4 center squares and bump them by a constant height upward
+//    //     ==  DEFORM VIA CENTER BUMP ======
+//    // Find the 4 center squares and bump them by a constant height upward
+//    tsunamisquares::UIndex central = (int) (0.5*num_lons*(num_lats + 1));
+//    std::cout << " about the central square " << central << "...";
+//    
+//    tsunamisquares::UIndex left    = this_world.square(central).left();
+//    tsunamisquares::UIndex right   = this_world.square(central).right();
+//    tsunamisquares::UIndex top     = this_world.square(central).top();
+//    tsunamisquares::UIndex bottom  = this_world.square(central).bottom();
+//    
+//    this_world.deformBottom(central,bump_height);
+//    this_world.deformBottom(left,   bump_height);
+//    this_world.deformBottom(top,    bump_height);
+//    this_world.deformBottom(right,  bump_height);
+//    this_world.deformBottom(bottom, bump_height);
+//
+//    // Optional: diffuse the central bump to be less peaked
+//    this_world.diffuseSquares(dt);
+    
+    //----==  DEFORM A STAIRCASE in the middle. Testing the plane fitting ======-------
     tsunamisquares::UIndex central = (int) (0.5*num_lons*(num_lats + 1));
     std::cout << " about the central square " << central << "...";
     
-    tsunamisquares::UIndex left    = this_world.square(central).left();
-    tsunamisquares::UIndex right   = this_world.square(central).right();
-    tsunamisquares::UIndex top     = this_world.square(central).top();
-    tsunamisquares::UIndex bottom  = this_world.square(central).bottom();
+    double mid_bump = this_world.square(central).Lx();
+    double hi_bump = 2.0*mid_bump;
     
-    this_world.deformBottom(central,bump_height);
-    this_world.deformBottom(left,   bump_height);
-    this_world.deformBottom(top,    bump_height);
-    this_world.deformBottom(right,  bump_height);
-    this_world.deformBottom(bottom, bump_height);
-    ////    // TODO: Save num_lons and num_lats in the world object
+    
+    tsunamisquares::UIndex left        = this_world.square(central).left();
+    tsunamisquares::UIndex right       = this_world.square(central).right();
+    tsunamisquares::UIndex top         = this_world.square(central).top();
+    tsunamisquares::UIndex top_left    = this_world.square(central).top_left();
+    tsunamisquares::UIndex top_right   = this_world.square(central).top_right();
+    tsunamisquares::UIndex bottom      = this_world.square(central).bottom();
+    tsunamisquares::UIndex bottom_left = this_world.square(central).bottom_left();
+    tsunamisquares::UIndex bottom_right= this_world.square(central).bottom_right();
+
+    // Stair case is hi to the left, drops to zero on the right
+    this_world.deformBottom(right,        hi_bump);
+    this_world.deformBottom(top_right,    hi_bump);
+    this_world.deformBottom(bottom_right, hi_bump);
+    
+    this_world.deformBottom(central,     mid_bump);
+    this_world.deformBottom(top,         mid_bump);
+    this_world.deformBottom(bottom,      mid_bump);
+    
+    this_world.getGradient_planeFit(central);
+    
+//    double x_result = this_world.fitPointsToPlane(this_world.square(central).get_nearest_neighbors_and_self());
+//    std::cout << "Best fit plane to " << this_world.square(central).get_nearest_neighbors_and_self().size() << " squares." << std::endl;
+//    std::cout << "grabbed x = (" << x_result[0] << ", " << x_result[1] << ", " << x_result[2] << std::endl;
 
 
-
-    // --------------------------------------------------------------------------------//
-    // --==                         File I/O Preparation                          --== //   
-    // --------------------------------------------------------------------------------//            
-    out_file.open(out_file_name.c_str());
-    out_file << header.c_str();
-    std::cout.precision(output_num_digits_for_percent);
-    
-    
-    
-    // --------------------------------------------------------------------------------//
-    // --========-           Begin the Simulation; Move the Squares          ----====- //          
-    // --------------------------------------------------------------------------------//    
-    std::cout << "Moving squares....time_step=" <<dt << "...";
-    while (time < max_time) {
-        // If this is a writing step, print status
-        if (current_step%update_step == 0) {
-            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
-            std::cout << std::flush;
-        }
-    
-        // Write the current state to file
-        if (current_step%save_step == 0) {
-            for (it=ids.begin(); it!=ids.end(); ++it) {
-                this_world.write_square_ascii(out_file, time, *it);
-            }
-        }
-        // Move the squares
-        this_world.moveSquares(dt);
-        this_world.diffuseSquares(dt);
-        time += dt;
-        current_step += 1;
-    }
-    out_file.close();
-    
-    
-    // --------------------------------------------------------------------------------//
-    // --========---                    Wrap up and Reporting            ---=======--- //
-    // --------------------------------------------------------------------------------//        
-    std::cout << std::endl << "Results written to " << out_file_name << std::endl;
-    end = clock();
-    std::cout.precision(2+output_num_digits_for_percent);
-    std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
+//    // --------------------------------------------------------------------------------//
+//    // --==                         File I/O Preparation                          --== //   
+//    // --------------------------------------------------------------------------------//            
+//    out_file.open(out_file_name.c_str());
+//    out_file << header.c_str();
+//    std::cout.precision(output_num_digits_for_percent);
+//    
+//    
+//    
+//    // --------------------------------------------------------------------------------//
+//    // --========-           Begin the Simulation; Move the Squares          ----====- //          
+//    // --------------------------------------------------------------------------------//    
+//    std::cout << "Moving squares....time_step=" <<dt << "...";
+//    while (time < max_time) {
+//        // If this is a writing step, print status
+//        if (current_step%update_step == 0) {
+//            std::cout << ".." << (100.0*current_step)/N_steps << "%..";
+//            std::cout << std::flush;
+//        }
+//    
+//        // Write the current state to file
+//        if (current_step%save_step == 0) {
+//            for (it=ids.begin(); it!=ids.end(); ++it) {
+//                this_world.write_square_ascii(out_file, time, *it);
+//            }
+//        }
+//        // Move the squares
+//        this_world.moveSquares(dt);
+//        this_world.diffuseSquares(dt);
+//        time += dt;
+//        current_step += 1;
+//    }
+//    out_file.close();
+//    
+//    
+//    // --------------------------------------------------------------------------------//
+//    // --========---                    Wrap up and Reporting            ---=======--- //
+//    // --------------------------------------------------------------------------------//        
+//    std::cout << std::endl << "Results written to " << out_file_name << std::endl;
+//    end = clock();
+//    std::cout.precision(2+output_num_digits_for_percent);
+//    std::cout << "Total time: " << (float(end)-float(start))/CLOCKS_PER_SEC << " secs." << std::endl << std::endl;
     return 0;
 }
 
