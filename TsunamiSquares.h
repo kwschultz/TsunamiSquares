@@ -474,6 +474,7 @@ namespace tsunamisquares {
             Vec<2> squareLatLon(const UIndex &square_id) const;
             double squareDepth(const UIndex &square_id) const;
             double squareLevel(const UIndex &square_id) const;
+            SquareIDSet get_neighbors_for_accel(const UIndex &square_id) const;
             // ======= Initial condition setup functions ======
             void setSquareVelocity(const UIndex &square_id, const Vec<2> &new_velo);
             void setSquareAccel(const UIndex &square_id, const Vec<2> &new_accel);

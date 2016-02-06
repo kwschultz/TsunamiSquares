@@ -285,9 +285,26 @@ void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
 }
 
 
-//tsunamisquares::SquareIDSet tsunamisquares::World::get_neighbors_for_accel(const UIndex &square_id) const {
-//    
-//}
+tsunamisquares::SquareIDSet tsunamisquares::World::get_neighbors_for_accel(const UIndex &square_id) const {
+    SquareIDSet                                    valid_squares, all_neighbors_and_self;
+    SquareIDSet::iterator                                                          id_it;
+
+    // Grab all valid neighbors
+    all_neighbors_and_self = _squares.find(square_id)->second.get_nearest_neighbors_and_self();
+    
+    // Only include the next nearest neighbors if they are not "hi and dry".
+    // A wave incident on the beach is not pushed backwards by the tall beach in front of it.
+    // The wave only falls back into the ocean after it has creeped up the beach and has water
+    // above and below it that define a slope for the water surface.
+    
+    for (id_it=all_neighbors_and_self.begin(); id_it!=all_neighbors_and_self.end(); ++id_it) {
+        if (!( (squareLevel(*id_it) == 0) && (squareDepth(*id_it) >= 0))) {
+            valid_squares.insert(*id_it);
+        }
+    }
+    
+    return valid_squares;
+}
 
 tsunamisquares::Vec<2> tsunamisquares::World::fitPointsToPlane(const SquareIDSet &square_ids) {
     // --------------------------------------------------------------------
@@ -380,8 +397,8 @@ tsunamisquares::Vec<2> tsunamisquares::World::getGradient_planeFit(const UIndex 
     if ( squareLatLon(square_it->first)[0] == min_lat() || squareLatLon(square_it->first)[0] == max_lat() || squareLatLon(square_it->first)[1] == min_lon() || squareLatLon(square_it->first)[1] == max_lon() ) {
         gradient = Vec<2>(0.0,0.0);
     } else {
-        // TODO: Handle hi and dry squares in accel. Need tsunamisquares::World::get_neighbors_for_accel
-        square_ids_to_fit = square_it->second.get_nearest_neighbors_and_self();
+        square_ids_to_fit = get_neighbors_for_accel(square_id);
+        
         gradient = fitPointsToPlane(square_ids_to_fit);
     }
     
