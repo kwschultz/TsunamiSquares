@@ -464,7 +464,7 @@ namespace tsunamisquares {
             void diffuseSquares(const double dt);
             Vec<2> getGradient(const UIndex &square_id) const;
             Vec<2> fitPointsToPlane(const SquareIDSet &square_ids);
-            void getGradient_planeFit(const UIndex &square_id);
+            tsunamisquares::Vec<2> getGradient_planeFit(const UIndex &square_id);
             void updateAcceleration(const UIndex &square_id);
             void deformBottom(const UIndex &square_id, const double &height_change);
             UIndex whichSquare(const Vec<2> &location) const;

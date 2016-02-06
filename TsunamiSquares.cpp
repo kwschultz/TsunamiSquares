@@ -270,7 +270,8 @@ void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
     // Only accelerate the water in this square IF there is water in this square
     if (square_it->second.height() != 0.0) {
         // gravitational acceleration due to the slope of the water surface
-        gradient = getGradient(square_id);
+        gradient = getGradient_planeFit(square_id);
+        
         grav_accel = gradient*G*(-1.0);
         
         // frictional acceleration from fluid particle interaction
@@ -282,6 +283,11 @@ void tsunamisquares::World::updateAcceleration(const UIndex &square_id) {
         square_it->second.set_accel( Vec<2>(0.0, 0.0) );
     }
 }
+
+
+//tsunamisquares::SquareIDSet tsunamisquares::World::get_neighbors_for_accel(const UIndex &square_id) const {
+//    
+//}
 
 tsunamisquares::Vec<2> tsunamisquares::World::fitPointsToPlane(const SquareIDSet &square_ids) {
     // --------------------------------------------------------------------
@@ -356,7 +362,7 @@ tsunamisquares::Vec<2> tsunamisquares::World::fitPointsToPlane(const SquareIDSet
         
     }
 
-    std::cout << "\nsolved for x: " << x[0] << ", " << x[1] << ", " << x[2] << std::endl;
+    //std::cout << "\nsolved for x: " << x[0] << ", " << x[1] << ", " << x[2] << std::endl;
     
     gradient[0] = x[0];
     gradient[1] = x[1];
@@ -364,25 +370,24 @@ tsunamisquares::Vec<2> tsunamisquares::World::fitPointsToPlane(const SquareIDSet
 
 }
 
-//tsunamisquares::Vec<2> tsunamisquares::World::getGradient_planeFit(const UIndex &square_id) const {
-void tsunamisquares::World::getGradient_planeFit(const UIndex &square_id) {
+tsunamisquares::Vec<2> tsunamisquares::World::getGradient_planeFit(const UIndex &square_id) {
     std::map<UIndex, Square>::const_iterator square_it = _squares.find(square_id);
     Vec<2> gradient;
     bool debug = false;
     SquareIDSet square_ids_to_fit;
     
-    // Build vector pointers
-//    double *A_fit = new double[9];
-//    double *b_fit = new double[3];
-//    double *x_fit = new double[3];
+    // TODO: Better boundary conditions. For now, just set no acceleration along boundary.
+    if ( squareLatLon(square_it->first)[0] == min_lat() || squareLatLon(square_it->first)[0] == max_lat() || squareLatLon(square_it->first)[1] == min_lon() || squareLatLon(square_it->first)[1] == max_lon() ) {
+        gradient = Vec<2>(0.0,0.0);
+    } else {
+        // TODO: Handle hi and dry squares in accel. Need tsunamisquares::World::get_neighbors_for_accel
+        square_ids_to_fit = square_it->second.get_nearest_neighbors_and_self();
+        gradient = fitPointsToPlane(square_ids_to_fit);
+    }
     
-    square_ids_to_fit = square_it->second.get_nearest_neighbors_and_self();
-    
-    gradient = fitPointsToPlane(square_ids_to_fit);
-    
-    std::cout << "grabbed gradient = (" << gradient[0] << ", " << gradient[1] << ")" << std::endl;
+    //std::cout << "grabbed gradient = (" << gradient[0] << ", " << gradient[1] << ")" << std::endl;
 
-    
+    return gradient;
 }
 
 
