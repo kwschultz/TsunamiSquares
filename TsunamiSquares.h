@@ -32,10 +32,6 @@ namespace tsunamisquares {
     static const UIndex INVALID_INDEX = std::numeric_limits<unsigned int>::max();
     //// INVALID_INDEX = 4294967295;
     
-    // Matrix solver. Solve Ax=b for x.
-    // Source: Virtual Quake v2.1.2
-    void solve_it(int n, double *x, double *A, double *b);
-    
     class ModelIO {
         private:
             std::string         _comment;
@@ -467,7 +463,8 @@ namespace tsunamisquares {
             void moveSquares(const double dt);
             void diffuseSquares(const double dt);
             Vec<2> getGradient(const UIndex &square_id) const;
-            double * fitPointsToPlane(const SquareIDSet &square_ids);
+            Vec<2> fitPointsToPlane(const SquareIDSet &square_ids);
+            void getGradient_planeFit(const UIndex &square_id);
             void updateAcceleration(const UIndex &square_id);
             void deformBottom(const UIndex &square_id, const double &height_change);
             UIndex whichSquare(const Vec<2> &location) const;
